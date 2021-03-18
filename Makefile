@@ -179,3 +179,7 @@ crossplane.help:
 help-special: crossplane.help
 
 .PHONY: crossplane.help help-special
+
+# ====================================================================================
+# IBM Customization
+-include common/Makefile.common.mk
