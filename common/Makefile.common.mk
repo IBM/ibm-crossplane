@@ -29,17 +29,38 @@ RELEASE_VERSION ?= $(shell cat RELEASE_VERSION)
 ifeq ($(BUILD_LOCALLY),0)
     export CONFIG_DOCKER_TARGET = config-docker
 	DOCKER_REGISTRY = hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom
+	export BUILD_REGISTRY=$(DOCKER_REGISTRY)
 else
 	DOCKER_REGISTRY = hyc-cloud-private-scratch-docker-local.artifactory.swg-devops.com/ibmcom
 endif
 
-images: $(MANIFEST_TOOL)
+ifeq ($(HOSTOS),darwin)
+	MANIFEST_TOOL_ARGS ?= --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
+else
+	MANIFEST_TOOL_ARGS ?= 
+endif
+
+image-amd64:
 	docker tag $(BUILD_REGISTRY)/crossplane-amd64:latest $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-amd64
 	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-amd64
-ifeq ($(HOSTOS),darwin)
-	@$(MANIFEST_TOOL) --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD) push from-args --platforms linux/amd64 --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
+
+image-ppc64le:
+	docker tag $(BUILD_REGISTRY)/crossplane-ppc64le:latest $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ppc64le
+	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ppc64le
+
+image-s390x:
+	docker tag $(BUILD_REGISTRY)/crossplane-s390x:latest $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-s390x
+	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-s390x
+
+images: $(MANIFEST_TOOL)
+ifeq ($(BUILD_LOCALLY),1)
+	@make image-amd64
+	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64 --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
 else
-	@$(MANIFEST_TOOL) push from-args --platforms linux/amd64 --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
+	@make image-amd64
+	@make image-ppc64le
+	@make image-s390x
+	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64,linux/ppc64le,linux/s390x --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
 endif
 
 ############################################################
