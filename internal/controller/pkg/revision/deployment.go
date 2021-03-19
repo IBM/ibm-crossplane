@@ -28,9 +28,10 @@ import (
 )
 
 var (
-	replicas                 = int32(1)
-	runAsUser                = int64(2000)
-	runAsGroup               = int64(2000)
+	replicas = int32(1)
+	// IBM Patch: Disable to run with restricted-scc in OpenShift
+	// runAsUser                = int64(2000)
+	// runAsGroup               = int64(2000)
 	allowPrivilegeEscalation = false
 	privileged               = false
 	runAsNonRoot             = true
@@ -68,8 +69,9 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &runAsNonRoot,
-						RunAsUser:    &runAsUser,
-						RunAsGroup:   &runAsGroup,
+						// IBM Patch: Disable to run with restricted-scc in OpenShift
+						// RunAsUser:    &runAsUser,
+						// RunAsGroup:   &runAsGroup,
 					},
 					ServiceAccountName: s.GetName(),
 					ImagePullSecrets:   revision.GetPackagePullSecrets(),
@@ -79,8 +81,9 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 							Image:           provider.Spec.Controller.Image,
 							ImagePullPolicy: pullPolicy,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:                &runAsUser,
-								RunAsGroup:               &runAsGroup,
+								// IBM Patch: Disable to run with restricted-scc in OpenShift
+								// RunAsUser:                &runAsUser,
+								// RunAsGroup:               &runAsGroup,
 								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 								Privileged:               &privileged,
 								RunAsNonRoot:             &runAsNonRoot,
