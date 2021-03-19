@@ -12,6 +12,8 @@ IBM Crossplane is a fork from an opensource project Crossplane with additonal en
 Red Hat OpenShift Container Platform 4.6 or newer installed on one of the following platforms:
 
 - Linux x86_64
+- Linux on Power (ppc64le)
+- Linux on IBM Z and LinuxONE
 
 ## Development
 
