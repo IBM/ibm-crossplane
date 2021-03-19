@@ -4,7 +4,7 @@ IBM Crossplane is a fork from an opensource project Crossplane with additonal en
 
 ## Requirements
 
-- go 1.14.x
+- go 1.14.x or go 1.15.x
 - helm 3.x
 
 ## Supported platforms
