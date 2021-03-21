@@ -25,6 +25,7 @@
 BUILD_LOCALLY ?= 1
 IMAGE_NAME ?= ibm-crossplane
 RELEASE_VERSION ?= $(shell cat RELEASE_VERSION)
+GO_SUPPORTED_VERSIONS = 1.14|1.15
 
 ifeq ($(BUILD_LOCALLY),0)
     export CONFIG_DOCKER_TARGET = config-docker
