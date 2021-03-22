@@ -430,30 +430,73 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		cds[i] = cd
 		refs[i] = *meta.ReferenceTo(cd, cd.GetObjectKind().GroupVersionKind())
-	}
 
-	// We persist references to our composed resources before we create them.
-	// This way we can render composed resources with non-deterministic names,
-	// and also potentially recover from any errors we encounter while applying
-	// composed resources without leaking them.
-	cr.SetResourceReferences(refs)
-	if err := r.client.Update(ctx, cr); err != nil {
-		log.Debug(errUpdate, "error", err)
-		r.record.Event(cr, event.Warning(reasonCompose, err))
-		return reconcile.Result{RequeueAfter: shortWait}, nil
-	}
+		// IBM Patch: Moved the block into this loop
+		// We persist references to our composed resources before we create them.
+		// This way we can render composed resources with non-deterministic names,
+		// and also potentially recover from any errors we encounter while applying
+		// composed resources without leaking them.
+		cr.SetResourceReferences(refs)
+		if err := r.client.Update(ctx, cr); err != nil {
+			log.Debug(errUpdate, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
 
-	// We apply all of our composed resources before we observe them and update
-	// the composite resource accordingly in the loop below. This ensures that
-	// issues observing and processing one composed resource won't block the
-	// application of another.
-	for _, cd := range cds {
-		if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
+		// IBM Patch: Some resource like bindings.ibmcloud.ibm.com may claim control of the resource.
+		// Save the ownerReferences and clear them before committing the apply.
+		ownerReferences := make([]metav1.OwnerReference, len(cd.GetOwnerReferences()))
+		copy(ownerReferences, cd.GetOwnerReferences())
+		cd.SetOwnerReferences([]metav1.OwnerReference{})
+
+		// IBM Patch: Apply the managed resource
+		if err := r.client.Apply(ctx, cd); err != nil {
+			log.Debug(errApply, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+
+		// IBM Patch: Check if the composed resource is ready
+		rdy, err := r.composed.IsReady(ctx, cd, comp.Spec.Resources[i])
+		if err != nil {
+			log.Debug(errReadiness, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+
+		// IBM Patch: Do not proceed until the composed resource is ready
+		if !rdy {
+			log.Debug("Composed resource is not ready")
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+
+		// IBM Patch: Restore the original owner references once the resource is ready
+		// This is for handling resource like bindings.ibmcloud.ibm.com claiming control of the resource
+		for i := range ownerReferences {
+			meta.AddOwnerReference(cd, ownerReferences[i])
+		}
+
+		// IBM Patch: Some resource like bindings.ibmcloud.ibm.com may claim control of the resource
+		// if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
+		if err := r.client.Apply(ctx, cd); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
 	}
+
+	// IBM Patch: Moved this block to above to render resource after the previous resource is ready
+	// // We apply all of our composed resources before we observe them and update
+	// // the composite resource accordingly in the loop below. This ensures that
+	// // issues observing and processing one composed resource won't block the
+	// // application of another.
+	// // for _, cd := range cds {
+	// 	if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
+	// 		log.Debug(errApply, "error", err)
+	// 		r.record.Event(cr, event.Warning(reasonCompose, err))
+	// 		return reconcile.Result{RequeueAfter: shortWait}, nil
+	// 	}
+	// }
 
 	conn := managed.ConnectionDetails{}
 	ready := 0
