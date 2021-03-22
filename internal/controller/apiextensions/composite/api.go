@@ -19,6 +19,7 @@ package composite
 import (
 	"context"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -288,13 +289,26 @@ func (c *APIConfigurator) Configure(ctx context.Context, cp resource.Composite, 
 		return errors.New(errCompositionNotCompatible)
 	}
 
-	if cp.GetWriteConnectionSecretToReference() != nil || comp.Spec.WriteConnectionSecretsToNamespace == nil {
+	// IBM Patch: Nothing to configure if the composite writeConnectionSecretToRef is already set
+	if cp.GetWriteConnectionSecretToReference() != nil {
 		return nil
 	}
 
+	// IBM Patch: Default connection secrets namespace to the same namespace where crossplane is deployed
+	n := os.Getenv("POD_NAMESPACE")
+	if comp.Spec.WriteConnectionSecretsToNamespace != nil {
+		n = *comp.Spec.WriteConnectionSecretsToNamespace
+	}
+
+	// IBM Patch: Nothing to configure if there is no derived namespace
+	if n == "" {
+		return nil
+	}
+
+	// IBM Patch: Use derived namespace
 	cp.SetWriteConnectionSecretToReference(&xpv1.SecretReference{
 		Name:      string(cp.GetUID()),
-		Namespace: *comp.Spec.WriteConnectionSecretsToNamespace,
+		Namespace: n,
 	})
 
 	return errors.Wrap(c.client.Update(ctx, cp), errUpdateComposite)
