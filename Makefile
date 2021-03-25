@@ -4,7 +4,9 @@
 PROJECT_NAME := crossplane
 PROJECT_REPO := github.com/crossplane/$(PROJECT_NAME)
 
-PLATFORMS ?= linux_amd64 linux_arm64 darwin_amd64 windows_amd64
+# IBM Crossplane supported platforms
+PLATFORMS ?= linux_amd64 linux_ppc64le linux_s390x
+# PLATFORMS ?= linux_amd64 linux_arm64 darwin_amd64 windows_amd64
 # -include will silently skip missing files, which allows us
 # to load those files with a target in the Makefile. If only
 # "include" was used, the make command would fail and refuse
@@ -172,3 +174,7 @@ crossplane.help:
 help-special: crossplane.help
 
 .PHONY: crossplane.help help-special
+
+# ====================================================================================
+# IBM Customization
+-include ibm/Makefile.common.mk
