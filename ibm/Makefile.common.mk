@@ -27,6 +27,8 @@ IMAGE_NAME ?= ibm-crossplane
 RELEASE_VERSION ?= $(shell cat RELEASE_VERSION)
 GO_SUPPORTED_VERSIONS = 1.14|1.15
 
+export OSBASEIMAGE=registry.access.redhat.com/ubi8/ubi-minimal:latest
+
 ifeq ($(BUILD_LOCALLY),0)
     export CONFIG_DOCKER_TARGET = config-docker
 	DOCKER_REGISTRY = hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom

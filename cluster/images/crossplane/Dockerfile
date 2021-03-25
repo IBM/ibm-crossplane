@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM BASEIMAGE
 ARG VCS_REF
 ARG VCS_URL
 ARG IMAGE_NAME
