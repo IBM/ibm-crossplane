@@ -150,6 +150,9 @@ func TestRender(t *testing.T) {
 }
 
 func TestFetch(t *testing.T) {
+	fromKey := v1.ConnectionDetailTypeFromConnectionSecretKey
+	fromVal := v1.ConnectionDetailTypeFromValue
+	fromField := v1.ConnectionDetailTypeFromFieldPath
 
 	sref := &xpv1.SecretReference{Name: "foo", Namespace: "bar"}
 	s := &corev1.Secret{
@@ -263,6 +266,210 @@ func TestFetch(t *testing.T) {
 				},
 			},
 		},
+		"ConnectionDetailValueNotSet": {
+			reason: "Should error if Value type value is not set",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Name: pointer.StringPtr("missingvalue"),
+						Type: &fromVal,
+					},
+				}},
+			},
+			want: want{
+				err: errors.Errorf(errFmtConnDetailVal, v1.ConnectionDetailTypeFromValue),
+			},
+		},
+		"ErrConnectionDetailNameNotSet": {
+			reason: "Should error if Value type name is not set",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Value: pointer.StringPtr("missingname"),
+						Type:  &fromVal,
+					},
+				}},
+			},
+			want: want{
+				err: errors.Errorf(errFmtConnDetailKey, v1.ConnectionDetailTypeFromValue),
+			},
+		},
+		"ErrConnectionDetailFromConnectionSecretKeyNotSet": {
+			reason: "Should error if ConnectionDetailFromConnectionSecretKey type FromConnectionSecretKey is not set",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Type: &fromKey,
+					},
+				}},
+			},
+			want: want{
+				err: errors.Errorf(errFmtConnDetailKey, v1.ConnectionDetailTypeFromConnectionSecretKey),
+			},
+		},
+		"ErrConnectionDetailFromFieldPathNotSet": {
+			reason: "Should error if ConnectionDetailFromFieldPath type FromFieldPath is not set",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Type: &fromField,
+						Name: pointer.StringPtr("missingname"),
+					},
+				}},
+			},
+			want: want{
+				err: errors.Errorf(errFmtConnDetailPath, v1.ConnectionDetailTypeFromFieldPath),
+			},
+		},
+		"ErrConnectionDetailFromFieldPathNameNotSet": {
+			reason: "Should error if ConnectionDetailFromFieldPath type Name is not set",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Type:          &fromField,
+						FromFieldPath: pointer.StringPtr("fieldpath"),
+					},
+				}},
+			},
+			want: want{
+				err: errors.Errorf(errFmtConnDetailKey, v1.ConnectionDetailTypeFromFieldPath),
+			},
+		},
+		"SuccessFieldPath": {
+			reason: "Should publish only the selected set of secret keys",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+					},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						// Entries with only a name are silently ignored.
+						Name:          pointer.StringPtr("name"),
+						FromFieldPath: pointer.StringPtr("objectMeta.name"),
+					},
+					{
+						// Entries with only a value are silently ignored.
+						Value: pointer.StringPtr("missingname"),
+					},
+				}},
+			},
+			want: want{
+				conn: managed.ConnectionDetails{
+					"name": []byte("test"),
+				},
+			},
+		},
+		"SuccessFieldPathMarshal": {
+			reason: "Should publish the secret keys as a JSON value",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 4,
+					},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Name:          pointer.StringPtr("generation"),
+						FromFieldPath: pointer.StringPtr("objectMeta.generation"),
+						Type:          &fromField,
+					},
+				}},
+			},
+			want: want{
+				conn: managed.ConnectionDetails{
+					"generation": []byte("4"),
+				},
+			},
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -273,6 +480,61 @@ func TestFetch(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.want.conn, conn); diff != "" {
 				t.Errorf("\n%s\nFetch(...): -want, +got:\n%s", tc.reason, diff)
+			}
+		})
+	}
+}
+
+func TestConnectionDetailType(t *testing.T) {
+	fromVal := v1.ConnectionDetailTypeFromValue
+	name := "coolsecret"
+	value := "coolvalue"
+	key := "coolkey"
+	field := "coolfield"
+
+	cases := map[string]struct {
+		d    v1.ConnectionDetail
+		want v1.ConnectionDetailType
+	}{
+		"FromValueExplicit": {
+			d:    v1.ConnectionDetail{Type: &fromVal},
+			want: v1.ConnectionDetailTypeFromValue,
+		},
+		"FromValueInferred": {
+			d: v1.ConnectionDetail{
+				Name:  &name,
+				Value: &value,
+
+				// Name and value trump key or field
+				FromConnectionSecretKey: &key,
+				FromFieldPath:           &field,
+			},
+			want: v1.ConnectionDetailTypeFromValue,
+		},
+		"FromConnectionSecretKeyInferred": {
+			d: v1.ConnectionDetail{
+				Name:                    &name,
+				FromConnectionSecretKey: &key,
+
+				// From key trumps from field
+				FromFieldPath: &field,
+			},
+			want: v1.ConnectionDetailTypeFromConnectionSecretKey,
+		},
+		"FromFieldPathInferred": {
+			d: v1.ConnectionDetail{
+				Name:          &name,
+				FromFieldPath: &field,
+			},
+			want: v1.ConnectionDetailTypeFromFieldPath,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := connectionDetailType(tc.d)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("connectionDetailType(...): -want, +got\n%s", diff)
 			}
 		})
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,14 +40,17 @@ import (
 
 // Error strings
 const (
-	errApply       = "cannot apply composed resource"
-	errFetchSecret = "cannot fetch connection secret"
-	errReadiness   = "cannot check whether composed resource is ready"
-	errUnmarshal   = "cannot unmarshal base template"
-	errFmtPatch    = "cannot apply the patch at index %d"
-	errGetSecret   = "cannot get connection secret of composed resource"
-	errNamePrefix  = "name prefix is not found in labels"
-	errName        = "cannot use dry-run create to name composed resource"
+	errApply             = "cannot apply composed resource"
+	errFetchSecret       = "cannot fetch connection secret"
+	errReadiness         = "cannot check whether composed resource is ready"
+	errUnmarshal         = "cannot unmarshal base template"
+	errFmtPatch          = "cannot apply the patch at index %d"
+	errGetSecret         = "cannot get connection secret of composed resource"
+	errNamePrefix        = "name prefix is not found in labels"
+	errName              = "cannot use dry-run create to name composed resource"
+	errFmtConnDetailKey  = "connection detail of type %q key is not set"
+	errFmtConnDetailVal  = "connection detail of type %q value is not set"
+	errFmtConnDetailPath = "connection detail of type %q fromFieldPath is not set"
 )
 
 // Observation is the result of composed reconciliation.
@@ -146,47 +150,113 @@ func NewAPIConnectionDetailsFetcher(c client.Client) *APIConnectionDetailsFetche
 }
 
 // FetchConnectionDetails of the supplied composed resource, if any.
-func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Context, cd resource.Composed, t v1.ComposedTemplate) (managed.ConnectionDetails, error) {
-	sref := cd.GetWriteConnectionSecretToReference()
-	if sref == nil {
-		return nil, nil
+func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Context, cd resource.Composed, t v1.ComposedTemplate) (managed.ConnectionDetails, error) { // nolint:gocyclo
+	data := map[string][]byte{}
+	if sref := cd.GetWriteConnectionSecretToReference(); sref != nil {
+		// It's possible that the composed resource does want to write a
+		// connection secret but has not yet. We presume this isn't an issue and
+		// that we'll propagate any connection details during a future
+		// iteration.
+		s := &corev1.Secret{}
+		nn := types.NamespacedName{Namespace: sref.Namespace, Name: sref.Name}
+		if err := cdf.client.Get(ctx, nn, s); client.IgnoreNotFound(err) != nil {
+			return nil, errors.Wrap(err, errGetSecret)
+		}
+		data = s.Data
 	}
 
 	conn := managed.ConnectionDetails{}
 
-	// It's possible that the composed resource does want to write a
-	// connection secret but has not yet. We presume this isn't an issue and
-	// that we'll propagate any connection details during a future
-	// iteration.
-	s := &corev1.Secret{}
-	nn := types.NamespacedName{Namespace: sref.Namespace, Name: sref.Name}
-	if err := cdf.client.Get(ctx, nn, s); client.IgnoreNotFound(err) != nil {
-		return nil, errors.Wrap(err, errGetSecret)
+	for _, d := range t.ConnectionDetails {
+		switch tp := connectionDetailType(d); tp {
+		case v1.ConnectionDetailTypeFromValue:
+			// Name, Value must be set if value type
+			switch {
+			case d.Name == nil:
+				return nil, errors.Errorf(errFmtConnDetailKey, tp)
+			case d.Value == nil:
+				return nil, errors.Errorf(errFmtConnDetailVal, tp)
+			default:
+				conn[*d.Name] = []byte(*d.Value)
+			}
+		case v1.ConnectionDetailTypeFromConnectionSecretKey:
+			if d.FromConnectionSecretKey == nil {
+				return nil, errors.Errorf(errFmtConnDetailKey, tp)
+			}
+			if data[*d.FromConnectionSecretKey] == nil {
+				// We don't consider this an error because it's possible the
+				// key will still be written at some point in the future.
+				continue
+			}
+			key := *d.FromConnectionSecretKey
+			if d.Name != nil {
+				key = *d.Name
+			}
+			if key != "" {
+				conn[key] = data[*d.FromConnectionSecretKey]
+			}
+		case v1.ConnectionDetailTypeFromFieldPath:
+			switch {
+			case d.Name == nil:
+				return nil, errors.Errorf(errFmtConnDetailKey, tp)
+			case d.FromFieldPath == nil:
+				return nil, errors.Errorf(errFmtConnDetailPath, tp)
+			default:
+				_ = extractFieldPathValue(cd, d, conn)
+			}
+		case v1.ConnectionDetailTypeUnknown:
+			// We weren't able to determine the type of this connection detail.
+		}
 	}
 
-	for _, d := range t.ConnectionDetails {
-		if d.Name != nil && d.Value != nil {
-			conn[*d.Name] = []byte(*d.Value)
-			continue
-		}
-
-		if d.FromConnectionSecretKey == nil {
-			continue
-		}
-
-		if len(s.Data[*d.FromConnectionSecretKey]) == 0 {
-			continue
-		}
-
-		key := *d.FromConnectionSecretKey
-		if d.Name != nil {
-			key = *d.Name
-		}
-
-		conn[key] = s.Data[*d.FromConnectionSecretKey]
+	if len(conn) == 0 {
+		return nil, nil
 	}
 
 	return conn, nil
+}
+
+// Originally there was no 'type' determinator field so Crossplane would infer
+// the type. We maintain this behaviour for backward compatibility when no type
+// is set.
+func connectionDetailType(d v1.ConnectionDetail) v1.ConnectionDetailType {
+	switch {
+	case d.Type != nil:
+		return *d.Type
+	case d.Name != nil && d.Value != nil:
+		return v1.ConnectionDetailTypeFromValue
+	case d.FromConnectionSecretKey != nil:
+		return v1.ConnectionDetailTypeFromConnectionSecretKey
+	case d.FromFieldPath != nil:
+		return v1.ConnectionDetailTypeFromFieldPath
+	default:
+		return v1.ConnectionDetailTypeUnknown
+	}
+}
+
+func extractFieldPathValue(from runtime.Object, detail v1.ConnectionDetail, conn managed.ConnectionDetails) error {
+	fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(from)
+	if err != nil {
+		return err
+	}
+
+	str, err := fieldpath.Pave(fromMap).GetString(*detail.FromFieldPath)
+	if err == nil {
+		conn[*detail.Name] = []byte(str)
+		return nil
+	}
+
+	in, err := fieldpath.Pave(fromMap).GetValue(*detail.FromFieldPath)
+	if err != nil {
+		return err
+	}
+
+	buffer, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+	conn[*detail.Name] = buffer
+	return nil
 }
 
 // IsReady returns whether the composed resource is ready.
