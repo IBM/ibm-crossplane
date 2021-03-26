@@ -57,9 +57,11 @@ image-s390x:
 
 images: $(MANIFEST_TOOL)
 ifeq ($(BUILD_LOCALLY),1)
+	@make build
 	@make image-amd64
 	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64 --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
 else
+	@make build.all
 	@make image-amd64
 	@make image-ppc64le
 	@make image-s390x
