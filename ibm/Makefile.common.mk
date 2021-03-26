@@ -16,6 +16,24 @@
 #
 
 ############################################################
+# GKE section
+############################################################
+PROJECT ?= oceanic-guard-191815
+ZONE    ?= us-west1-a
+CLUSTER ?= prow
+
+activate-serviceaccount:
+ifdef GOOGLE_APPLICATION_CREDENTIALS
+	gcloud auth activate-service-account --key-file="$(GOOGLE_APPLICATION_CREDENTIALS)"
+endif
+
+get-cluster-credentials: activate-serviceaccount
+	gcloud container clusters get-credentials "$(CLUSTER)" --project="$(PROJECT)" --zone="$(ZONE)"
+
+config-docker: get-cluster-credentials
+	@ibm/scripts/config_docker.sh
+
+############################################################
 # Prow section
 ############################################################
 
@@ -30,7 +48,6 @@ GO_SUPPORTED_VERSIONS = 1.14|1.15
 export OSBASEIMAGE=registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 ifeq ($(BUILD_LOCALLY),0)
-    export CONFIG_DOCKER_TARGET = config-docker
 	DOCKER_REGISTRY = hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom
 	export BUILD_REGISTRY=$(DOCKER_REGISTRY)
 else
@@ -61,6 +78,7 @@ ifeq ($(BUILD_LOCALLY),1)
 	@make image-amd64
 	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64 --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
 else
+	@make config-docker
 	@make build.all
 	@make image-amd64
 	@make image-ppc64le
@@ -68,20 +86,4 @@ else
 	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64,linux/ppc64le,linux/s390x --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
 endif
 
-############################################################
-# GKE section
-############################################################
-PROJECT ?= oceanic-guard-191815
-ZONE    ?= us-west1-a
-CLUSTER ?= prow
-GLCOUD ?= $(shell which gcloud)
-
-activate-serviceaccount:
-	$(GCLOUD) auth activate-service-account --key-file="$(GOOGLE_APPLICATION_CREDENTIALS)"
-
-get-cluster-credentials: activate-serviceaccount
-	$(GCLOUD) container clusters get-credentials "$(CLUSTER)" --project="$(PROJECT)" --zone="$(ZONE)"
-
-config-docker: get-cluster-credentials
-	@common/scripts/config_docker.sh
 
