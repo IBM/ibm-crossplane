@@ -381,24 +381,60 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 
 		cds[i] = cd
 		refs[i] = *meta.ReferenceTo(cd, cd.GetObjectKind().GroupVersionKind())
-	}
 
-	cr.SetResourceReferences(refs)
-	if err := r.client.Update(ctx, cr); err != nil {
-		log.Debug(errUpdate, "error", err)
-		r.record.Event(cr, event.Warning(reasonCompose, err))
-		return reconcile.Result{RequeueAfter: shortWait}, nil
-	}
+		// IBM Patch: This block has been moved in to the loop
+		cr.SetResourceReferences(refs)
+		if err := r.client.Update(ctx, cr); err != nil {
+			log.Debug(errUpdate, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
 
-	conn := managed.ConnectionDetails{}
-	ready := 0
-	for i, cd := range cds {
-		if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
+		// IBM Patch: Some resource like bindings.ibmcloud.ibm.com may claim control of the resource.
+		// Save the ownerReferences and clear them before committing the apply.
+		ownerReferences := make([]metav1.OwnerReference, len(cd.GetOwnerReferences()))
+		copy(ownerReferences, cd.GetOwnerReferences())
+		cd.SetOwnerReferences([]metav1.OwnerReference{})
+
+		// IBM Patch: Apply the managed resource
+		if err := r.client.Apply(ctx, cd); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
 
+		// IBM Patch: Check if the composed resource is ready
+		rdy, err := r.composed.IsReady(ctx, cd, comp.Spec.Resources[i])
+		if err != nil {
+			log.Debug(errReadiness, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+
+		// IBM Patch: Do not proceed until the composed resource is ready
+		if !rdy {
+			log.Debug("Composed resource is not ready")
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+
+		// IBM Patch: Restore the original owner references once the resource is ready
+		// This is for handling resource like bindings.ibmcloud.ibm.com claiming control of the resource
+		for i := range ownerReferences {
+			meta.AddOwnerReference(cd, ownerReferences[i])
+		}
+
+		// IBM Patch: Some resource like bindings.ibmcloud.ibm.com may claim control of the resource
+		// if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
+		if err := r.client.Apply(ctx, cd); err != nil {
+			log.Debug(errApply, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+	}
+
+	conn := managed.ConnectionDetails{}
+	ready := 0
+	for i, cd := range cds {
 		// Connection details are fetched in all cases in a best-effort mode,
 		// i.e. it doesn't return error if the secret does not exist or the
 		// resource does not publish a secret at all.
