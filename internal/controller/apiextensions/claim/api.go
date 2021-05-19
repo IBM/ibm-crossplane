@@ -28,8 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
+	"github.com/crossplane/crossplane-runtime/pkg/resource/unstructured/claim"
 )
 
 // Error strings.
@@ -57,7 +59,8 @@ func NewAPIBinder(c client.Client, t runtime.ObjectTyper) *APIBinder {
 
 // Bind the supplied claim to the supplied composite.
 func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp resource.Composite) error {
-	existing := cm.GetResourceReference()
+	// IBM Patch: Move resourceRef to status
+	existing := GetResourceReference(cm)
 	proposed := meta.ReferenceTo(cp, resource.MustGetKind(cp, a.typer))
 	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
 		return errors.New(errBindClaimConflict)
@@ -71,6 +74,10 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	// could fail and trigger a requeue between composite creation and reference
 	// persistence as possible.
 	cm.SetResourceReference(proposed)
+	// IBM Patch: Move resourceRef to status
+	if err := updateCompositeClaimStatus(ctx, a, cm); err != nil {
+		return errors.Wrap(err, errUpdateClaim)
+	}
 	if err := a.client.Update(ctx, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
 	}
@@ -84,6 +91,51 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	cp.SetClaimReference(proposed)
 	return errors.Wrap(a.client.Update(ctx, cp), errUpdateComposite)
 }
+
+// IBM Patch: Move resourceRef to status
+
+// GetResourceReference Patch method which read data from status instead of spec
+func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
+	out := &corev1.ObjectReference{}
+	if err := fieldpath.Pave(cm.(*claim.Unstructured).Object).GetValueInto("status.resourceRef", out); err != nil {
+		return nil
+	}
+	if out.Name == "" {
+		return nil
+	}
+	return out
+}
+
+func updateCompositeClaimStatus(ctx context.Context, a *APIBinder, cm resource.CompositeClaim) error {
+	data, err := cm.(*claim.Unstructured)
+	if err {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	iSpec, _ := fieldpath.Pave(data.Object).GetValue("spec")
+	spec, err := iSpec.(map[string]interface{})
+	if err {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	iStatus, _ := fieldpath.Pave(data.Object).GetValue("status")
+	status, err := iStatus.(map[string]interface{})
+	if err {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	if spec["resourceRef"] != nil {
+		status["resourceRef"] = spec["resourceRef"]
+		delete(spec, "resourceRef")
+	}
+
+	if err := a.client.Status().Update(ctx, cm); err != nil {
+		return errors.Wrap(err, errUpdateClaim)
+	}
+	return nil
+}
+
+// IBM Patch End: Move resourceRef to status
 
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.

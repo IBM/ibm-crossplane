@@ -96,6 +96,7 @@ func CompositeResourceSpecProps() map[string]extv1.JSONSchemaProps {
 				"name":       {Type: "string"},
 			},
 		},
+		// IBM Patch: Move resourceRef to status
 		"resourceRefs": {
 			Type: "array",
 			Items: &extv1.JSONSchemaPropsOrArray{
@@ -191,6 +192,15 @@ func CompositeResourceStatusProps() map[string]extv1.JSONSchemaProps {
 			Type: "object",
 			Properties: map[string]extv1.JSONSchemaProps{
 				"lastPublishedTime": {Type: "string", Format: "date-time"},
+			},
+		},
+		"resourceRef": {
+			Type:     "object",
+			Required: []string{"apiVersion", "kind", "name"},
+			Properties: map[string]extv1.JSONSchemaProps{
+				"apiVersion": {Type: "string"},
+				"kind":       {Type: "string"},
+				"name":       {Type: "string"},
 			},
 		},
 	}

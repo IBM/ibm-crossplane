@@ -278,9 +278,10 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	)
 
 	cp := r.newComposite()
-	if ref := cm.GetResourceReference(); ref != nil {
-		record = record.WithAnnotations("composite-name", cm.GetResourceReference().Name)
-		log = log.WithValues("composite-name", cm.GetResourceReference().Name)
+	// IBM Patch: Move resourceRef to status
+	if ref := GetResourceReference(cm); ref != nil {
+		record = record.WithAnnotations("composite-name", GetResourceReference(cm).Name)
+		log = log.WithValues("composite-name", GetResourceReference(cm).Name)
 
 		if err := r.client.Get(ctx, meta.NamespacedNameOf(ref), cp); err != nil {
 			// If our referenced composite doesn't exist and we're not being
