@@ -75,7 +75,7 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	// persistence as possible.
 	cm.SetResourceReference(proposed)
 	// IBM Patch: Move resourceRef to status
-	if err := updateCompositeClaimStatus(ctx, a, cm); err != nil {
+	if err := updateCompositeClaimStatus(ctx, a.client, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
 	}
 	if err := a.client.Update(ctx, cm); err != nil {
@@ -97,8 +97,8 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 // GetResourceReference Patch method which read data from status instead of spec
 func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
 	out := &corev1.ObjectReference{}
-	data, _ := cm.(*claim.Unstructured)
-	if data == nil {
+	data, ok := cm.(*claim.Unstructured)
+	if data == nil || !ok {
 		// back to standard inside one test where we can not change mock because of different repo
 		return cm.GetResourceReference()
 	}
@@ -115,35 +115,48 @@ func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
 	return out
 }
 
-func updateCompositeClaimStatus(ctx context.Context, a *APIBinder, cm resource.CompositeClaim) error {
-	data, err := cm.(*claim.Unstructured)
-	if err {
-		return errors.New(errUnsupportedClaimSpec)
-	}
-	// back to standard inside one test where we can not change mock because of different repo
-	if data == nil {
-		return nil
-	}
-
-	iSpec, _ := fieldpath.Pave(data.Object).GetValue("spec")
-	spec, err := iSpec.(map[string]interface{})
-	if err {
+// SetResourceRef - you can set resourceRef or you can remove it , if you set nil
+func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
+	data, ok := cm.(*claim.Unstructured)
+	if !ok {
 		return errors.New(errUnsupportedClaimSpec)
 	}
 
 	iStatus, _ := fieldpath.Pave(data.Object).GetValue("status")
-	status, err := iStatus.(map[string]interface{})
-	if err {
+	status, ok := iStatus.(map[string]interface{})
+	if !ok {
 		return errors.New(errUnsupportedClaimSpec)
 	}
 
-	if spec["resourceRef"] != nil {
-		status["resourceRef"] = spec["resourceRef"]
-		delete(spec, "resourceRef")
+	if resourceRef != nil {
+		status["resourceRef"] = resourceRef
+	} else {
+		delete(status, "resourceRef")
 	}
 
-	if err := a.client.Status().Update(ctx, cm); err != nil {
+	if err := c.Status().Update(ctx, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
+	}
+	return nil
+}
+
+func updateCompositeClaimStatus(ctx context.Context, c client.Client, cm resource.CompositeClaim) error {
+	data, ok := cm.(*claim.Unstructured)
+	// back to standard inside one test where we can not change mock because of different repo
+	if !ok || data == nil {
+		return nil
+	}
+
+	iSpec, _ := fieldpath.Pave(data.Object).GetValue("spec")
+	spec, ok := iSpec.(map[string]interface{})
+	if !ok {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+	if spec["resourceRef"] != nil {
+		if err := SetResourceRef(ctx, c, cm, spec["resourceRef"]); err != nil {
+			return err
+		}
+		delete(spec, "resourceRef")
 	}
 	return nil
 }

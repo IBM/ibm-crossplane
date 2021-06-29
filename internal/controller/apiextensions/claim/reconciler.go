@@ -299,6 +299,8 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 			if !kerrors.IsNotFound(err) || !meta.WasDeleted(cm) {
 				log.Debug("Cannot get referenced composite resource", "error", err, "requeue-after", time.Now().Add(aShortWait))
 				record.Event(cm, event.Warning(reasonBind, err))
+				err := SetResourceRef(ctx, r.client, cm, nil)
+				record.Event(cm, event.Warning(reasonBind, err))
 				return reconcile.Result{RequeueAfter: aShortWait}, nil
 			}
 		}
