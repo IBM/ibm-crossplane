@@ -97,8 +97,17 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 // GetResourceReference Patch method which read data from status instead of spec
 func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
 	out := &corev1.ObjectReference{}
-	if err := fieldpath.Pave(cm.(*claim.Unstructured).Object).GetValueInto("status.resourceRef", out); err != nil {
-		return nil
+	data, _ := cm.(*claim.Unstructured)
+	if data == nil {
+		// back to standard inside one test where we can not change mock because of different repo
+		return cm.GetResourceReference()
+	}
+	if err := fieldpath.Pave(data.Object).GetValueInto("status.resourceRef", out); err != nil {
+		// back to standard inside one test where we can not change mock because of different repo
+		if err := fieldpath.Pave(data.Object).GetValueInto("spec.resourceRef", out); err != nil {
+			return nil
+		}
+		return out
 	}
 	if out.Name == "" {
 		return nil
@@ -110,6 +119,10 @@ func updateCompositeClaimStatus(ctx context.Context, a *APIBinder, cm resource.C
 	data, err := cm.(*claim.Unstructured)
 	if err {
 		return errors.New(errUnsupportedClaimSpec)
+	}
+	// back to standard inside one test where we can not change mock because of different repo
+	if data == nil {
+		return nil
 	}
 
 	iSpec, _ := fieldpath.Pave(data.Object).GetValue("spec")
