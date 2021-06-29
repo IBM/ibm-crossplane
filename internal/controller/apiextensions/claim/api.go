@@ -73,10 +73,9 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	// of leaking newly created composite resources. We want as few calls that
 	// could fail and trigger a requeue between composite creation and reference
 	// persistence as possible.
-	cm.SetResourceReference(proposed)
 	// IBM Patch: Move resourceRef to status
-	if err := updateCompositeClaimStatus(ctx, a.client, cm); err != nil {
-		return errors.Wrap(err, errUpdateClaim)
+	if err := SetResourceRef(ctx, a.client, cm, proposed); err != nil {
+		return err
 	}
 	if err := a.client.Update(ctx, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
@@ -119,9 +118,10 @@ func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
 func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
 	data, ok := cm.(*claim.Unstructured)
 	if !ok {
-		return errors.New(errUnsupportedClaimSpec)
+		return nil
 	}
 
+	// initailize status if we need to set it and it is not exists
 	if data.Object["status"] == nil && resourceRef != nil {
 		data.Object["status"] = map[string]interface{}{
 			"resourceRef": resourceRef,
@@ -143,30 +143,8 @@ func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeC
 	} else {
 		delete(status, "resourceRef")
 	}
-
 	if err := c.Status().Update(ctx, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
-	}
-	return nil
-}
-
-func updateCompositeClaimStatus(ctx context.Context, c client.Client, cm resource.CompositeClaim) error {
-	data, ok := cm.(*claim.Unstructured)
-	// back to standard inside one test where we can not change mock because of different repo
-	if !ok || data == nil {
-		return nil
-	}
-
-	iSpec, _ := fieldpath.Pave(data.Object).GetValue("spec")
-	spec, ok := iSpec.(map[string]interface{})
-	if !ok {
-		return errors.New(errUnsupportedClaimSpec)
-	}
-	if spec["resourceRef"] != nil {
-		if err := SetResourceRef(ctx, c, cm, spec["resourceRef"]); err != nil {
-			return err
-		}
-		delete(spec, "resourceRef")
 	}
 	return nil
 }
