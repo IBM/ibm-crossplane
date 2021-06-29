@@ -264,18 +264,13 @@ func TestForCompositeResource(t *testing.T) {
 											"lastPublishedTime": {Type: "string", Format: "date-time"},
 										},
 									},
-									"resourceRefs": {
-										Type: "array",
-										Items: &extv1.JSONSchemaPropsOrArray{
-											Schema: &extv1.JSONSchemaProps{
-												Type: "object",
-												Properties: map[string]extv1.JSONSchemaProps{
-													"apiVersion": {Type: "string"},
-													"name":       {Type: "string"},
-													"kind":       {Type: "string"},
-												},
-												Required: []string{"apiVersion", "kind", "name"},
-											},
+									"resourceRef": {
+										Type:     "object",
+										Required: []string{"apiVersion", "kind", "name"},
+										Properties: map[string]extv1.JSONSchemaProps{
+											"apiVersion": {Type: "string"},
+											"kind":       {Type: "string"},
+											"name":       {Type: "string"},
 										},
 									},
 								},
@@ -586,6 +581,15 @@ func TestForCompositeResourceClaim(t *testing.T) {
 											Type: "object",
 											Properties: map[string]extv1.JSONSchemaProps{
 												"lastPublishedTime": {Type: "string", Format: "date-time"},
+											},
+										},
+										"resourceRef": {
+											Type:     "object",
+											Required: []string{"apiVersion", "kind", "name"},
+											Properties: map[string]extv1.JSONSchemaProps{
+												"apiVersion": {Type: "string"},
+												"kind":       {Type: "string"},
+												"name":       {Type: "string"},
 											},
 										},
 									},
