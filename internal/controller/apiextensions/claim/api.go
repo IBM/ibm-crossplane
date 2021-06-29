@@ -122,7 +122,17 @@ func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeC
 		return errors.New(errUnsupportedClaimSpec)
 	}
 
-	iStatus, _ := fieldpath.Pave(data.Object).GetValue("status")
+	if data.Object["status"] == nil && resourceRef != nil {
+		data.Object["status"] = map[string]interface{}{
+			"resourceRef": resourceRef,
+		}
+	}
+
+	iStatus, err := fieldpath.Pave(data.Object).GetValue("status")
+	if err != nil {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
 	status, ok := iStatus.(map[string]interface{})
 	if !ok {
 		return errors.New(errUnsupportedClaimSpec)

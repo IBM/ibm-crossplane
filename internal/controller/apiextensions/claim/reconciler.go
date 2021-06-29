@@ -299,8 +299,11 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 			if !kerrors.IsNotFound(err) || !meta.WasDeleted(cm) {
 				log.Debug("Cannot get referenced composite resource", "error", err, "requeue-after", time.Now().Add(aShortWait))
 				record.Event(cm, event.Warning(reasonBind, err))
+				// IBM Patch: Move resourceRef to status
 				err := SetResourceRef(ctx, r.client, cm, nil)
-				record.Event(cm, event.Warning(reasonBind, err))
+				if err != nil {
+					log.Debug("Cannot remove resourceRef from claim status", "error", err, "requeue-after", time.Now().Add(aShortWait))
+				}
 				return reconcile.Result{RequeueAfter: aShortWait}, nil
 			}
 		}
