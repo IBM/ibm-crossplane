@@ -28,8 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
+	"github.com/crossplane/crossplane-runtime/pkg/resource/unstructured/claim"
 )
 
 // Error strings.
@@ -57,7 +59,8 @@ func NewAPIBinder(c client.Client, t runtime.ObjectTyper) *APIBinder {
 
 // Bind the supplied claim to the supplied composite.
 func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp resource.Composite) error {
-	existing := cm.GetResourceReference()
+	// IBM Patch: Move resourceRef to status
+	existing := GetResourceReference(cm)
 	proposed := meta.ReferenceTo(cp, resource.MustGetKind(cp, a.typer))
 	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
 		return errors.New(errBindClaimConflict)
@@ -70,7 +73,10 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	// of leaking newly created composite resources. We want as few calls that
 	// could fail and trigger a requeue between composite creation and reference
 	// persistence as possible.
-	cm.SetResourceReference(proposed)
+	// IBM Patch: Move resourceRef to status
+	if err := SetResourceRef(ctx, a.client, cm, proposed); err != nil {
+		return err
+	}
 	if err := a.client.Update(ctx, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
 	}
@@ -84,6 +90,66 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	cp.SetClaimReference(proposed)
 	return errors.Wrap(a.client.Update(ctx, cp), errUpdateComposite)
 }
+
+// IBM Patch: Move resourceRef to status
+
+// GetResourceReference Patch method which read data from status instead of spec
+func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
+	out := &corev1.ObjectReference{}
+	data, ok := cm.(*claim.Unstructured)
+	if data == nil || !ok {
+		// back to standard inside one test where we can not change mock because of different repo
+		return cm.GetResourceReference()
+	}
+	if err := fieldpath.Pave(data.Object).GetValueInto("status.resourceRef", out); err != nil {
+		// back to standard inside one test where we can not change mock because of different repo
+		if err := fieldpath.Pave(data.Object).GetValueInto("spec.resourceRef", out); err != nil {
+			return nil
+		}
+		return out
+	}
+	if out.Name == "" {
+		return nil
+	}
+	return out
+}
+
+// SetResourceRef - you can set resourceRef or you can remove it , if you set nil
+func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
+	data, ok := cm.(*claim.Unstructured)
+	if !ok {
+		return nil
+	}
+
+	// initailize status if we need to set it and it is not exists
+	if data.Object["status"] == nil && resourceRef != nil {
+		data.Object["status"] = map[string]interface{}{
+			"resourceRef": resourceRef,
+		}
+	}
+
+	iStatus, err := fieldpath.Pave(data.Object).GetValue("status")
+	if err != nil {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	status, ok := iStatus.(map[string]interface{})
+	if !ok {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	if resourceRef != nil {
+		status["resourceRef"] = resourceRef
+	} else {
+		delete(status, "resourceRef")
+	}
+	if err := c.Status().Update(ctx, cm); err != nil {
+		return errors.Wrap(err, errUpdateClaim)
+	}
+	return nil
+}
+
+// IBM Patch End: Move resourceRef to status
 
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.
