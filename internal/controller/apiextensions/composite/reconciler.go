@@ -405,13 +405,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
-		/*		// IBM Patch: Some resource like bindings.ibmcloud.ibm.com may claim control of the resource.
-				// Save the ownerReferences and clear them before committing the apply.
-				ownerReferences := make([]metav1.OwnerReference, len(cd.GetOwnerReferences()))
-				copy(ownerReferences, cd.GetOwnerReferences())
-		*/
-		/*		cd.SetOwnerReferences([]metav1.OwnerReference{})
-		 */
+
 		// IBM Patch: Apply the managed resource
 		if err := r.client.Apply(ctx, cd); err != nil {
 			log.Debug(errApply, "error", err)
@@ -432,23 +426,6 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 			log.Debug("Composed resource is not ready")
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
-
-		/*		// IBM Patch: Restore the original owner references once the resource is ready
-				// This is for handling resource like bindings.ibmcloud.ibm.com claiming control of the resource
-				for i := range ownerReferences {
-					meta.AddOwnerReference(cd, ownerReferences[i])
-				}
-
-				// IBM Patch: Some resource like bindings.ibmcloud.ibm.com may claim control of the resource
-				// if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
-		*/
-		//????
-		/*		if err := r.client.Apply(ctx, cd); err != nil {
-					log.Debug(errApply, "error", err)
-					r.record.Event(cr, event.Warning(reasonCompose, err))
-					return reconcile.Result{RequeueAfter: shortWait}, nil
-				}
-		*/
 	}
 
 	conn := managed.ConnectionDetails{}
