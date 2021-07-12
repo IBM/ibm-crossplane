@@ -33,7 +33,7 @@ import (
 // ProvidersGetter has a method to return a ProviderInterface.
 // A group's client should implement this interface.
 type ProvidersGetter interface {
-	Providers() ProviderInterface
+	Providers(namespace string) ProviderInterface
 }
 
 // ProviderInterface has methods to work with Provider resources.
@@ -53,12 +53,14 @@ type ProviderInterface interface {
 // providers implements ProviderInterface
 type providers struct {
 	client rest.Interface
+	ns     string
 }
 
 // newProviders returns a Providers
-func newProviders(c *PkgV1beta1Client) *providers {
+func newProviders(c *PkgV1beta1Client, namespace string) *providers {
 	return &providers{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -66,6 +68,7 @@ func newProviders(c *PkgV1beta1Client) *providers {
 func (c *providers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Provider, err error) {
 	result = &v1beta1.Provider{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("providers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +85,7 @@ func (c *providers) List(ctx context.Context, opts v1.ListOptions) (result *v1be
 	}
 	result = &v1beta1.ProviderList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("providers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +102,7 @@ func (c *providers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inter
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("providers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +113,7 @@ func (c *providers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inter
 func (c *providers) Create(ctx context.Context, provider *v1beta1.Provider, opts v1.CreateOptions) (result *v1beta1.Provider, err error) {
 	result = &v1beta1.Provider{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("providers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(provider).
@@ -120,6 +126,7 @@ func (c *providers) Create(ctx context.Context, provider *v1beta1.Provider, opts
 func (c *providers) Update(ctx context.Context, provider *v1beta1.Provider, opts v1.UpdateOptions) (result *v1beta1.Provider, err error) {
 	result = &v1beta1.Provider{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("providers").
 		Name(provider.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +141,7 @@ func (c *providers) Update(ctx context.Context, provider *v1beta1.Provider, opts
 func (c *providers) UpdateStatus(ctx context.Context, provider *v1beta1.Provider, opts v1.UpdateOptions) (result *v1beta1.Provider, err error) {
 	result = &v1beta1.Provider{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("providers").
 		Name(provider.Name).
 		SubResource("status").
@@ -147,6 +155,7 @@ func (c *providers) UpdateStatus(ctx context.Context, provider *v1beta1.Provider
 // Delete takes name of the provider and deletes it. Returns an error if one occurs.
 func (c *providers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("providers").
 		Name(name).
 		Body(&opts).
@@ -161,6 +170,7 @@ func (c *providers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("providers").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +183,7 @@ func (c *providers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 func (c *providers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Provider, err error) {
 	result = &v1beta1.Provider{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("providers").
 		Name(name).
 		SubResource(subresources...).

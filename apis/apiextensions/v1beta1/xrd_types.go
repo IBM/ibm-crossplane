@@ -152,7 +152,6 @@ type CompositeResourceDefinitionControllerStatus struct {
 
 // +kubebuilder:object:root=true
 // +genclient
-// +genclient:nonNamespaced
 
 // An CompositeResourceDefinition defines a new kind of composite infrastructure
 // resource. The new resource is composed of other composite or managed
@@ -161,7 +160,7 @@ type CompositeResourceDefinitionControllerStatus struct {
 // +kubebuilder:printcolumn:name="OFFERED",type="string",JSONPath=".status.conditions[?(@.type=='Offered')].status"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,categories=crossplane,shortName=xrd
+// +kubebuilder:resource:scope=Namespaced,categories=crossplane,shortName=xrd
 type CompositeResourceDefinition struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

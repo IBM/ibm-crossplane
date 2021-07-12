@@ -16,7 +16,7 @@ spec:
     listKind: CompositionList
     plural: compositions
     singular: composition
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .metadata.creationTimestamp

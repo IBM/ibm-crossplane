@@ -33,16 +33,18 @@ import (
 // FakeProviderRevisions implements ProviderRevisionInterface
 type FakeProviderRevisions struct {
 	Fake *FakePkgV1beta1
+	ns   string
 }
 
-var providerrevisionsResource = schema.GroupVersionResource{Group: "pkg.crossplane.io", Version: "v1beta1", Resource: "providerrevisions"}
+var providerrevisionsResource = schema.GroupVersionResource{Group: "pkg.ibm.crossplane.io", Version: "v1beta1", Resource: "providerrevisions"}
 
-var providerrevisionsKind = schema.GroupVersionKind{Group: "pkg.crossplane.io", Version: "v1beta1", Kind: "ProviderRevision"}
+var providerrevisionsKind = schema.GroupVersionKind{Group: "pkg.ibm.crossplane.io", Version: "v1beta1", Kind: "ProviderRevision"}
 
 // Get takes name of the providerRevision, and returns the corresponding providerRevision object, and an error if there is any.
 func (c *FakeProviderRevisions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ProviderRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(providerrevisionsResource, name), &v1beta1.ProviderRevision{})
+		Invokes(testing.NewGetAction(providerrevisionsResource, c.ns, name), &v1beta1.ProviderRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (c *FakeProviderRevisions) Get(ctx context.Context, name string, options v1
 // List takes label and field selectors, and returns the list of ProviderRevisions that match those selectors.
 func (c *FakeProviderRevisions) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ProviderRevisionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(providerrevisionsResource, providerrevisionsKind, opts), &v1beta1.ProviderRevisionList{})
+		Invokes(testing.NewListAction(providerrevisionsResource, providerrevisionsKind, c.ns, opts), &v1beta1.ProviderRevisionList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -73,13 +76,15 @@ func (c *FakeProviderRevisions) List(ctx context.Context, opts v1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested providerRevisions.
 func (c *FakeProviderRevisions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(providerrevisionsResource, opts))
+		InvokesWatch(testing.NewWatchAction(providerrevisionsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a providerRevision and creates it.  Returns the server's representation of the providerRevision, and an error, if there is any.
 func (c *FakeProviderRevisions) Create(ctx context.Context, providerRevision *v1beta1.ProviderRevision, opts v1.CreateOptions) (result *v1beta1.ProviderRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(providerrevisionsResource, providerRevision), &v1beta1.ProviderRevision{})
+		Invokes(testing.NewCreateAction(providerrevisionsResource, c.ns, providerRevision), &v1beta1.ProviderRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -89,7 +94,8 @@ func (c *FakeProviderRevisions) Create(ctx context.Context, providerRevision *v1
 // Update takes the representation of a providerRevision and updates it. Returns the server's representation of the providerRevision, and an error, if there is any.
 func (c *FakeProviderRevisions) Update(ctx context.Context, providerRevision *v1beta1.ProviderRevision, opts v1.UpdateOptions) (result *v1beta1.ProviderRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(providerrevisionsResource, providerRevision), &v1beta1.ProviderRevision{})
+		Invokes(testing.NewUpdateAction(providerrevisionsResource, c.ns, providerRevision), &v1beta1.ProviderRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -100,7 +106,8 @@ func (c *FakeProviderRevisions) Update(ctx context.Context, providerRevision *v1
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeProviderRevisions) UpdateStatus(ctx context.Context, providerRevision *v1beta1.ProviderRevision, opts v1.UpdateOptions) (*v1beta1.ProviderRevision, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(providerrevisionsResource, "status", providerRevision), &v1beta1.ProviderRevision{})
+		Invokes(testing.NewUpdateSubresourceAction(providerrevisionsResource, "status", c.ns, providerRevision), &v1beta1.ProviderRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -110,13 +117,14 @@ func (c *FakeProviderRevisions) UpdateStatus(ctx context.Context, providerRevisi
 // Delete takes name of the providerRevision and deletes it. Returns an error if one occurs.
 func (c *FakeProviderRevisions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(providerrevisionsResource, name), &v1beta1.ProviderRevision{})
+		Invokes(testing.NewDeleteAction(providerrevisionsResource, c.ns, name), &v1beta1.ProviderRevision{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeProviderRevisions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(providerrevisionsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(providerrevisionsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.ProviderRevisionList{})
 	return err
@@ -125,7 +133,8 @@ func (c *FakeProviderRevisions) DeleteCollection(ctx context.Context, opts v1.De
 // Patch applies the patch and returns the patched providerRevision.
 func (c *FakeProviderRevisions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ProviderRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(providerrevisionsResource, name, pt, data, subresources...), &v1beta1.ProviderRevision{})
+		Invokes(testing.NewPatchSubresourceAction(providerrevisionsResource, c.ns, name, pt, data, subresources...), &v1beta1.ProviderRevision{})
+
 	if obj == nil {
 		return nil, err
 	}

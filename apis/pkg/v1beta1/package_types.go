@@ -23,6 +23,8 @@ type PackageSpec struct {
 	// Package is the name of the package that is being requested.
 	Package string `json:"package"`
 
+	PackageSecond string `json:"packageSecond"`
+
 	// RevisionActivationPolicy specifies how the package controller should
 	// update from one revision to the next. Options are Automatic or Manual.
 	// Default is Automatic.

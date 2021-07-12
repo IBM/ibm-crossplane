@@ -28,12 +28,12 @@ type FakePkgV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakePkgV1alpha1) ControllerConfigs() v1alpha1.ControllerConfigInterface {
-	return &FakeControllerConfigs{c}
+func (c *FakePkgV1alpha1) ControllerConfigs(namespace string) v1alpha1.ControllerConfigInterface {
+	return &FakeControllerConfigs{c, namespace}
 }
 
-func (c *FakePkgV1alpha1) Locks() v1alpha1.LockInterface {
-	return &FakeLocks{c}
+func (c *FakePkgV1alpha1) Locks(namespace string) v1alpha1.LockInterface {
+	return &FakeLocks{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

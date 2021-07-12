@@ -33,6 +33,7 @@ import (
 // FakeConfigurations implements ConfigurationInterface
 type FakeConfigurations struct {
 	Fake *FakePkgV1
+	ns   string
 }
 
 var configurationsResource = schema.GroupVersionResource{Group: "pkg.crossplane.io", Version: "v1", Resource: "configurations"}
@@ -42,7 +43,8 @@ var configurationsKind = schema.GroupVersionKind{Group: "pkg.crossplane.io", Ver
 // Get takes name of the configuration, and returns the corresponding configuration object, and an error if there is any.
 func (c *FakeConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *pkgv1.Configuration, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(configurationsResource, name), &pkgv1.Configuration{})
+		Invokes(testing.NewGetAction(configurationsResource, c.ns, name), &pkgv1.Configuration{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (c *FakeConfigurations) Get(ctx context.Context, name string, options v1.Ge
 // List takes label and field selectors, and returns the list of Configurations that match those selectors.
 func (c *FakeConfigurations) List(ctx context.Context, opts v1.ListOptions) (result *pkgv1.ConfigurationList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(configurationsResource, configurationsKind, opts), &pkgv1.ConfigurationList{})
+		Invokes(testing.NewListAction(configurationsResource, configurationsKind, c.ns, opts), &pkgv1.ConfigurationList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -73,13 +76,15 @@ func (c *FakeConfigurations) List(ctx context.Context, opts v1.ListOptions) (res
 // Watch returns a watch.Interface that watches the requested configurations.
 func (c *FakeConfigurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(configurationsResource, opts))
+		InvokesWatch(testing.NewWatchAction(configurationsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a configuration and creates it.  Returns the server's representation of the configuration, and an error, if there is any.
 func (c *FakeConfigurations) Create(ctx context.Context, configuration *pkgv1.Configuration, opts v1.CreateOptions) (result *pkgv1.Configuration, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(configurationsResource, configuration), &pkgv1.Configuration{})
+		Invokes(testing.NewCreateAction(configurationsResource, c.ns, configuration), &pkgv1.Configuration{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -89,7 +94,8 @@ func (c *FakeConfigurations) Create(ctx context.Context, configuration *pkgv1.Co
 // Update takes the representation of a configuration and updates it. Returns the server's representation of the configuration, and an error, if there is any.
 func (c *FakeConfigurations) Update(ctx context.Context, configuration *pkgv1.Configuration, opts v1.UpdateOptions) (result *pkgv1.Configuration, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(configurationsResource, configuration), &pkgv1.Configuration{})
+		Invokes(testing.NewUpdateAction(configurationsResource, c.ns, configuration), &pkgv1.Configuration{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -100,7 +106,8 @@ func (c *FakeConfigurations) Update(ctx context.Context, configuration *pkgv1.Co
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeConfigurations) UpdateStatus(ctx context.Context, configuration *pkgv1.Configuration, opts v1.UpdateOptions) (*pkgv1.Configuration, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(configurationsResource, "status", configuration), &pkgv1.Configuration{})
+		Invokes(testing.NewUpdateSubresourceAction(configurationsResource, "status", c.ns, configuration), &pkgv1.Configuration{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -110,13 +117,14 @@ func (c *FakeConfigurations) UpdateStatus(ctx context.Context, configuration *pk
 // Delete takes name of the configuration and deletes it. Returns an error if one occurs.
 func (c *FakeConfigurations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(configurationsResource, name), &pkgv1.Configuration{})
+		Invokes(testing.NewDeleteAction(configurationsResource, c.ns, name), &pkgv1.Configuration{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeConfigurations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(configurationsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(configurationsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &pkgv1.ConfigurationList{})
 	return err
@@ -125,7 +133,8 @@ func (c *FakeConfigurations) DeleteCollection(ctx context.Context, opts v1.Delet
 // Patch applies the patch and returns the patched configuration.
 func (c *FakeConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *pkgv1.Configuration, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(configurationsResource, name, pt, data, subresources...), &pkgv1.Configuration{})
+		Invokes(testing.NewPatchSubresourceAction(configurationsResource, c.ns, name, pt, data, subresources...), &pkgv1.Configuration{})
+
 	if obj == nil {
 		return nil, err
 	}

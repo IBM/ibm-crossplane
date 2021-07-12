@@ -56,6 +56,7 @@ type installConfigCmd struct {
 	Package string `arg:"" help:"Image containing Configuration package."`
 
 	Name                 string   `arg:"" optional:"" help:"Name of Configuration."`
+	Namespace            string   `arg:"" optional:"" help:"Namespace of Configuration."`
 	RevisionHistoryLimit int64    `short:"rl" help:"Revision history limit."`
 	ManualActivation     bool     `short:"m" help:"Enable manual revision activation policy."`
 	PackagePullSecrets   []string `help:"List of secrets used to pull package."`
@@ -95,7 +96,7 @@ func (c *installConfigCmd) Run(k *kong.Context) error {
 		},
 	}
 	kube := typedclient.NewForConfigOrDie(ctrl.GetConfigOrDie())
-	res, err := kube.Configurations().Create(context.Background(), cr, metav1.CreateOptions{})
+	res, err := kube.Configurations(c.Namespace).Create(context.Background(), cr, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "cannot create configuration")
 	}
@@ -108,6 +109,7 @@ type installProviderCmd struct {
 	Package string `arg:"" help:"Image containing Provider package."`
 
 	Name                 string `arg:"" optional:"" help:"Name of Provider."`
+	Namespace            string `arg:"" optional:"" help:"Namespace of Provider."`
 	RevisionHistoryLimit int64  `short:"rl" help:"Revision history limit."`
 	ManualActivation     bool   `short:"m" help:"Enable manual revision activation policy."`
 }
@@ -139,7 +141,7 @@ func (c *installProviderCmd) Run(k *kong.Context) error {
 		},
 	}
 	kube := typedclient.NewForConfigOrDie(ctrl.GetConfigOrDie())
-	res, err := kube.Providers().Create(context.Background(), cr, metav1.CreateOptions{})
+	res, err := kube.Providers(c.Namespace).Create(context.Background(), cr, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "cannot create provider")
 	}

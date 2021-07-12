@@ -33,7 +33,7 @@ import (
 // ProviderRevisionsGetter has a method to return a ProviderRevisionInterface.
 // A group's client should implement this interface.
 type ProviderRevisionsGetter interface {
-	ProviderRevisions() ProviderRevisionInterface
+	ProviderRevisions(namespace string) ProviderRevisionInterface
 }
 
 // ProviderRevisionInterface has methods to work with ProviderRevision resources.
@@ -53,12 +53,14 @@ type ProviderRevisionInterface interface {
 // providerRevisions implements ProviderRevisionInterface
 type providerRevisions struct {
 	client rest.Interface
+	ns     string
 }
 
 // newProviderRevisions returns a ProviderRevisions
-func newProviderRevisions(c *PkgV1beta1Client) *providerRevisions {
+func newProviderRevisions(c *PkgV1beta1Client, namespace string) *providerRevisions {
 	return &providerRevisions{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -66,6 +68,7 @@ func newProviderRevisions(c *PkgV1beta1Client) *providerRevisions {
 func (c *providerRevisions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ProviderRevision, err error) {
 	result = &v1beta1.ProviderRevision{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +85,7 @@ func (c *providerRevisions) List(ctx context.Context, opts v1.ListOptions) (resu
 	}
 	result = &v1beta1.ProviderRevisionList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +102,7 @@ func (c *providerRevisions) Watch(ctx context.Context, opts v1.ListOptions) (wat
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +113,7 @@ func (c *providerRevisions) Watch(ctx context.Context, opts v1.ListOptions) (wat
 func (c *providerRevisions) Create(ctx context.Context, providerRevision *v1beta1.ProviderRevision, opts v1.CreateOptions) (result *v1beta1.ProviderRevision, err error) {
 	result = &v1beta1.ProviderRevision{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(providerRevision).
@@ -120,6 +126,7 @@ func (c *providerRevisions) Create(ctx context.Context, providerRevision *v1beta
 func (c *providerRevisions) Update(ctx context.Context, providerRevision *v1beta1.ProviderRevision, opts v1.UpdateOptions) (result *v1beta1.ProviderRevision, err error) {
 	result = &v1beta1.ProviderRevision{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		Name(providerRevision.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +141,7 @@ func (c *providerRevisions) Update(ctx context.Context, providerRevision *v1beta
 func (c *providerRevisions) UpdateStatus(ctx context.Context, providerRevision *v1beta1.ProviderRevision, opts v1.UpdateOptions) (result *v1beta1.ProviderRevision, err error) {
 	result = &v1beta1.ProviderRevision{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		Name(providerRevision.Name).
 		SubResource("status").
@@ -147,6 +155,7 @@ func (c *providerRevisions) UpdateStatus(ctx context.Context, providerRevision *
 // Delete takes name of the providerRevision and deletes it. Returns an error if one occurs.
 func (c *providerRevisions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		Name(name).
 		Body(&opts).
@@ -161,6 +170,7 @@ func (c *providerRevisions) DeleteCollection(ctx context.Context, opts v1.Delete
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +183,7 @@ func (c *providerRevisions) DeleteCollection(ctx context.Context, opts v1.Delete
 func (c *providerRevisions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ProviderRevision, err error) {
 	result = &v1beta1.ProviderRevision{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("providerrevisions").
 		Name(name).
 		SubResource(subresources...).

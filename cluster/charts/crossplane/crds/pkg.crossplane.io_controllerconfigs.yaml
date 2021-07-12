@@ -14,7 +14,7 @@ spec:
     listKind: ControllerConfigList
     plural: controllerconfigs
     singular: controllerconfig
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .metadata.creationTimestamp

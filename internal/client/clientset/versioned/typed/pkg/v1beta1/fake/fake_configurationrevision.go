@@ -33,16 +33,18 @@ import (
 // FakeConfigurationRevisions implements ConfigurationRevisionInterface
 type FakeConfigurationRevisions struct {
 	Fake *FakePkgV1beta1
+	ns   string
 }
 
-var configurationrevisionsResource = schema.GroupVersionResource{Group: "pkg.crossplane.io", Version: "v1beta1", Resource: "configurationrevisions"}
+var configurationrevisionsResource = schema.GroupVersionResource{Group: "pkg.ibm.crossplane.io", Version: "v1beta1", Resource: "configurationrevisions"}
 
-var configurationrevisionsKind = schema.GroupVersionKind{Group: "pkg.crossplane.io", Version: "v1beta1", Kind: "ConfigurationRevision"}
+var configurationrevisionsKind = schema.GroupVersionKind{Group: "pkg.ibm.crossplane.io", Version: "v1beta1", Kind: "ConfigurationRevision"}
 
 // Get takes name of the configurationRevision, and returns the corresponding configurationRevision object, and an error if there is any.
 func (c *FakeConfigurationRevisions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ConfigurationRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(configurationrevisionsResource, name), &v1beta1.ConfigurationRevision{})
+		Invokes(testing.NewGetAction(configurationrevisionsResource, c.ns, name), &v1beta1.ConfigurationRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (c *FakeConfigurationRevisions) Get(ctx context.Context, name string, optio
 // List takes label and field selectors, and returns the list of ConfigurationRevisions that match those selectors.
 func (c *FakeConfigurationRevisions) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ConfigurationRevisionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(configurationrevisionsResource, configurationrevisionsKind, opts), &v1beta1.ConfigurationRevisionList{})
+		Invokes(testing.NewListAction(configurationrevisionsResource, configurationrevisionsKind, c.ns, opts), &v1beta1.ConfigurationRevisionList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -73,13 +76,15 @@ func (c *FakeConfigurationRevisions) List(ctx context.Context, opts v1.ListOptio
 // Watch returns a watch.Interface that watches the requested configurationRevisions.
 func (c *FakeConfigurationRevisions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(configurationrevisionsResource, opts))
+		InvokesWatch(testing.NewWatchAction(configurationrevisionsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a configurationRevision and creates it.  Returns the server's representation of the configurationRevision, and an error, if there is any.
 func (c *FakeConfigurationRevisions) Create(ctx context.Context, configurationRevision *v1beta1.ConfigurationRevision, opts v1.CreateOptions) (result *v1beta1.ConfigurationRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(configurationrevisionsResource, configurationRevision), &v1beta1.ConfigurationRevision{})
+		Invokes(testing.NewCreateAction(configurationrevisionsResource, c.ns, configurationRevision), &v1beta1.ConfigurationRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -89,7 +94,8 @@ func (c *FakeConfigurationRevisions) Create(ctx context.Context, configurationRe
 // Update takes the representation of a configurationRevision and updates it. Returns the server's representation of the configurationRevision, and an error, if there is any.
 func (c *FakeConfigurationRevisions) Update(ctx context.Context, configurationRevision *v1beta1.ConfigurationRevision, opts v1.UpdateOptions) (result *v1beta1.ConfigurationRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(configurationrevisionsResource, configurationRevision), &v1beta1.ConfigurationRevision{})
+		Invokes(testing.NewUpdateAction(configurationrevisionsResource, c.ns, configurationRevision), &v1beta1.ConfigurationRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -100,7 +106,8 @@ func (c *FakeConfigurationRevisions) Update(ctx context.Context, configurationRe
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeConfigurationRevisions) UpdateStatus(ctx context.Context, configurationRevision *v1beta1.ConfigurationRevision, opts v1.UpdateOptions) (*v1beta1.ConfigurationRevision, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(configurationrevisionsResource, "status", configurationRevision), &v1beta1.ConfigurationRevision{})
+		Invokes(testing.NewUpdateSubresourceAction(configurationrevisionsResource, "status", c.ns, configurationRevision), &v1beta1.ConfigurationRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -110,13 +117,14 @@ func (c *FakeConfigurationRevisions) UpdateStatus(ctx context.Context, configura
 // Delete takes name of the configurationRevision and deletes it. Returns an error if one occurs.
 func (c *FakeConfigurationRevisions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(configurationrevisionsResource, name), &v1beta1.ConfigurationRevision{})
+		Invokes(testing.NewDeleteAction(configurationrevisionsResource, c.ns, name), &v1beta1.ConfigurationRevision{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeConfigurationRevisions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(configurationrevisionsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(configurationrevisionsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.ConfigurationRevisionList{})
 	return err
@@ -125,7 +133,8 @@ func (c *FakeConfigurationRevisions) DeleteCollection(ctx context.Context, opts 
 // Patch applies the patch and returns the patched configurationRevision.
 func (c *FakeConfigurationRevisions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ConfigurationRevision, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(configurationrevisionsResource, name, pt, data, subresources...), &v1beta1.ConfigurationRevision{})
+		Invokes(testing.NewPatchSubresourceAction(configurationrevisionsResource, c.ns, name, pt, data, subresources...), &v1beta1.ConfigurationRevision{})
+
 	if obj == nil {
 		return nil, err
 	}

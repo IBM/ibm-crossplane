@@ -117,12 +117,11 @@ func (d *Dependency) AddNeighbors(...dag.Node) error {
 
 // +kubebuilder:object:root=true
 // +genclient
-// +genclient:nonNamespaced
 
 // Lock is the CRD type that tracks package dependencies.
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Namespaced
 type Lock struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

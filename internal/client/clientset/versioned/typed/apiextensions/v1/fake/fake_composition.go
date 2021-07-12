@@ -33,6 +33,7 @@ import (
 // FakeCompositions implements CompositionInterface
 type FakeCompositions struct {
 	Fake *FakeApiextensionsV1
+	ns   string
 }
 
 var compositionsResource = schema.GroupVersionResource{Group: "apiextensions.crossplane.io", Version: "v1", Resource: "compositions"}
@@ -42,7 +43,8 @@ var compositionsKind = schema.GroupVersionKind{Group: "apiextensions.crossplane.
 // Get takes name of the composition, and returns the corresponding composition object, and an error if there is any.
 func (c *FakeCompositions) Get(ctx context.Context, name string, options v1.GetOptions) (result *apiextensionsv1.Composition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(compositionsResource, name), &apiextensionsv1.Composition{})
+		Invokes(testing.NewGetAction(compositionsResource, c.ns, name), &apiextensionsv1.Composition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (c *FakeCompositions) Get(ctx context.Context, name string, options v1.GetO
 // List takes label and field selectors, and returns the list of Compositions that match those selectors.
 func (c *FakeCompositions) List(ctx context.Context, opts v1.ListOptions) (result *apiextensionsv1.CompositionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(compositionsResource, compositionsKind, opts), &apiextensionsv1.CompositionList{})
+		Invokes(testing.NewListAction(compositionsResource, compositionsKind, c.ns, opts), &apiextensionsv1.CompositionList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -73,13 +76,15 @@ func (c *FakeCompositions) List(ctx context.Context, opts v1.ListOptions) (resul
 // Watch returns a watch.Interface that watches the requested compositions.
 func (c *FakeCompositions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(compositionsResource, opts))
+		InvokesWatch(testing.NewWatchAction(compositionsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a composition and creates it.  Returns the server's representation of the composition, and an error, if there is any.
 func (c *FakeCompositions) Create(ctx context.Context, composition *apiextensionsv1.Composition, opts v1.CreateOptions) (result *apiextensionsv1.Composition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(compositionsResource, composition), &apiextensionsv1.Composition{})
+		Invokes(testing.NewCreateAction(compositionsResource, c.ns, composition), &apiextensionsv1.Composition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -89,7 +94,8 @@ func (c *FakeCompositions) Create(ctx context.Context, composition *apiextension
 // Update takes the representation of a composition and updates it. Returns the server's representation of the composition, and an error, if there is any.
 func (c *FakeCompositions) Update(ctx context.Context, composition *apiextensionsv1.Composition, opts v1.UpdateOptions) (result *apiextensionsv1.Composition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(compositionsResource, composition), &apiextensionsv1.Composition{})
+		Invokes(testing.NewUpdateAction(compositionsResource, c.ns, composition), &apiextensionsv1.Composition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -100,7 +106,8 @@ func (c *FakeCompositions) Update(ctx context.Context, composition *apiextension
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeCompositions) UpdateStatus(ctx context.Context, composition *apiextensionsv1.Composition, opts v1.UpdateOptions) (*apiextensionsv1.Composition, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(compositionsResource, "status", composition), &apiextensionsv1.Composition{})
+		Invokes(testing.NewUpdateSubresourceAction(compositionsResource, "status", c.ns, composition), &apiextensionsv1.Composition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -110,13 +117,14 @@ func (c *FakeCompositions) UpdateStatus(ctx context.Context, composition *apiext
 // Delete takes name of the composition and deletes it. Returns an error if one occurs.
 func (c *FakeCompositions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(compositionsResource, name), &apiextensionsv1.Composition{})
+		Invokes(testing.NewDeleteAction(compositionsResource, c.ns, name), &apiextensionsv1.Composition{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeCompositions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(compositionsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(compositionsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &apiextensionsv1.CompositionList{})
 	return err
@@ -125,7 +133,8 @@ func (c *FakeCompositions) DeleteCollection(ctx context.Context, opts v1.DeleteO
 // Patch applies the patch and returns the patched composition.
 func (c *FakeCompositions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apiextensionsv1.Composition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(compositionsResource, name, pt, data, subresources...), &apiextensionsv1.Composition{})
+		Invokes(testing.NewPatchSubresourceAction(compositionsResource, c.ns, name, pt, data, subresources...), &apiextensionsv1.Composition{})
+
 	if obj == nil {
 		return nil, err
 	}

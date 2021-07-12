@@ -33,6 +33,7 @@ import (
 // FakeCompositeResourceDefinitions implements CompositeResourceDefinitionInterface
 type FakeCompositeResourceDefinitions struct {
 	Fake *FakeApiextensionsV1
+	ns   string
 }
 
 var compositeresourcedefinitionsResource = schema.GroupVersionResource{Group: "apiextensions.crossplane.io", Version: "v1", Resource: "compositeresourcedefinitions"}
@@ -42,7 +43,8 @@ var compositeresourcedefinitionsKind = schema.GroupVersionKind{Group: "apiextens
 // Get takes name of the compositeResourceDefinition, and returns the corresponding compositeResourceDefinition object, and an error if there is any.
 func (c *FakeCompositeResourceDefinitions) Get(ctx context.Context, name string, options v1.GetOptions) (result *apiextensionsv1.CompositeResourceDefinition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(compositeresourcedefinitionsResource, name), &apiextensionsv1.CompositeResourceDefinition{})
+		Invokes(testing.NewGetAction(compositeresourcedefinitionsResource, c.ns, name), &apiextensionsv1.CompositeResourceDefinition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (c *FakeCompositeResourceDefinitions) Get(ctx context.Context, name string,
 // List takes label and field selectors, and returns the list of CompositeResourceDefinitions that match those selectors.
 func (c *FakeCompositeResourceDefinitions) List(ctx context.Context, opts v1.ListOptions) (result *apiextensionsv1.CompositeResourceDefinitionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(compositeresourcedefinitionsResource, compositeresourcedefinitionsKind, opts), &apiextensionsv1.CompositeResourceDefinitionList{})
+		Invokes(testing.NewListAction(compositeresourcedefinitionsResource, compositeresourcedefinitionsKind, c.ns, opts), &apiextensionsv1.CompositeResourceDefinitionList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -73,13 +76,15 @@ func (c *FakeCompositeResourceDefinitions) List(ctx context.Context, opts v1.Lis
 // Watch returns a watch.Interface that watches the requested compositeResourceDefinitions.
 func (c *FakeCompositeResourceDefinitions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(compositeresourcedefinitionsResource, opts))
+		InvokesWatch(testing.NewWatchAction(compositeresourcedefinitionsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a compositeResourceDefinition and creates it.  Returns the server's representation of the compositeResourceDefinition, and an error, if there is any.
 func (c *FakeCompositeResourceDefinitions) Create(ctx context.Context, compositeResourceDefinition *apiextensionsv1.CompositeResourceDefinition, opts v1.CreateOptions) (result *apiextensionsv1.CompositeResourceDefinition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(compositeresourcedefinitionsResource, compositeResourceDefinition), &apiextensionsv1.CompositeResourceDefinition{})
+		Invokes(testing.NewCreateAction(compositeresourcedefinitionsResource, c.ns, compositeResourceDefinition), &apiextensionsv1.CompositeResourceDefinition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -89,7 +94,8 @@ func (c *FakeCompositeResourceDefinitions) Create(ctx context.Context, composite
 // Update takes the representation of a compositeResourceDefinition and updates it. Returns the server's representation of the compositeResourceDefinition, and an error, if there is any.
 func (c *FakeCompositeResourceDefinitions) Update(ctx context.Context, compositeResourceDefinition *apiextensionsv1.CompositeResourceDefinition, opts v1.UpdateOptions) (result *apiextensionsv1.CompositeResourceDefinition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(compositeresourcedefinitionsResource, compositeResourceDefinition), &apiextensionsv1.CompositeResourceDefinition{})
+		Invokes(testing.NewUpdateAction(compositeresourcedefinitionsResource, c.ns, compositeResourceDefinition), &apiextensionsv1.CompositeResourceDefinition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -100,7 +106,8 @@ func (c *FakeCompositeResourceDefinitions) Update(ctx context.Context, composite
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeCompositeResourceDefinitions) UpdateStatus(ctx context.Context, compositeResourceDefinition *apiextensionsv1.CompositeResourceDefinition, opts v1.UpdateOptions) (*apiextensionsv1.CompositeResourceDefinition, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(compositeresourcedefinitionsResource, "status", compositeResourceDefinition), &apiextensionsv1.CompositeResourceDefinition{})
+		Invokes(testing.NewUpdateSubresourceAction(compositeresourcedefinitionsResource, "status", c.ns, compositeResourceDefinition), &apiextensionsv1.CompositeResourceDefinition{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -110,13 +117,14 @@ func (c *FakeCompositeResourceDefinitions) UpdateStatus(ctx context.Context, com
 // Delete takes name of the compositeResourceDefinition and deletes it. Returns an error if one occurs.
 func (c *FakeCompositeResourceDefinitions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(compositeresourcedefinitionsResource, name), &apiextensionsv1.CompositeResourceDefinition{})
+		Invokes(testing.NewDeleteAction(compositeresourcedefinitionsResource, c.ns, name), &apiextensionsv1.CompositeResourceDefinition{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeCompositeResourceDefinitions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(compositeresourcedefinitionsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(compositeresourcedefinitionsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &apiextensionsv1.CompositeResourceDefinitionList{})
 	return err
@@ -125,7 +133,8 @@ func (c *FakeCompositeResourceDefinitions) DeleteCollection(ctx context.Context,
 // Patch applies the patch and returns the patched compositeResourceDefinition.
 func (c *FakeCompositeResourceDefinitions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apiextensionsv1.CompositeResourceDefinition, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(compositeresourcedefinitionsResource, name, pt, data, subresources...), &apiextensionsv1.CompositeResourceDefinition{})
+		Invokes(testing.NewPatchSubresourceAction(compositeresourcedefinitionsResource, c.ns, name, pt, data, subresources...), &apiextensionsv1.CompositeResourceDefinition{})
+
 	if obj == nil {
 		return nil, err
 	}

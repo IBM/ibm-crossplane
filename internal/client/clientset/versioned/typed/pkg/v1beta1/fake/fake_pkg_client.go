@@ -28,20 +28,20 @@ type FakePkgV1beta1 struct {
 	*testing.Fake
 }
 
-func (c *FakePkgV1beta1) Configurations() v1beta1.ConfigurationInterface {
-	return &FakeConfigurations{c}
+func (c *FakePkgV1beta1) Configurations(namespace string) v1beta1.ConfigurationInterface {
+	return &FakeConfigurations{c, namespace}
 }
 
-func (c *FakePkgV1beta1) ConfigurationRevisions() v1beta1.ConfigurationRevisionInterface {
-	return &FakeConfigurationRevisions{c}
+func (c *FakePkgV1beta1) ConfigurationRevisions(namespace string) v1beta1.ConfigurationRevisionInterface {
+	return &FakeConfigurationRevisions{c, namespace}
 }
 
-func (c *FakePkgV1beta1) Providers() v1beta1.ProviderInterface {
-	return &FakeProviders{c}
+func (c *FakePkgV1beta1) Providers(namespace string) v1beta1.ProviderInterface {
+	return &FakeProviders{c, namespace}
 }
 
-func (c *FakePkgV1beta1) ProviderRevisions() v1beta1.ProviderRevisionInterface {
-	return &FakeProviderRevisions{c}
+func (c *FakePkgV1beta1) ProviderRevisions(namespace string) v1beta1.ProviderRevisionInterface {
+	return &FakeProviderRevisions{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

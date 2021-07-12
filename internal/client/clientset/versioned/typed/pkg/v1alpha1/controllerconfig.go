@@ -33,7 +33,7 @@ import (
 // ControllerConfigsGetter has a method to return a ControllerConfigInterface.
 // A group's client should implement this interface.
 type ControllerConfigsGetter interface {
-	ControllerConfigs() ControllerConfigInterface
+	ControllerConfigs(namespace string) ControllerConfigInterface
 }
 
 // ControllerConfigInterface has methods to work with ControllerConfig resources.
@@ -52,12 +52,14 @@ type ControllerConfigInterface interface {
 // controllerConfigs implements ControllerConfigInterface
 type controllerConfigs struct {
 	client rest.Interface
+	ns     string
 }
 
 // newControllerConfigs returns a ControllerConfigs
-func newControllerConfigs(c *PkgV1alpha1Client) *controllerConfigs {
+func newControllerConfigs(c *PkgV1alpha1Client, namespace string) *controllerConfigs {
 	return &controllerConfigs{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -65,6 +67,7 @@ func newControllerConfigs(c *PkgV1alpha1Client) *controllerConfigs {
 func (c *controllerConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ControllerConfig, err error) {
 	result = &v1alpha1.ControllerConfig{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -81,6 +84,7 @@ func (c *controllerConfigs) List(ctx context.Context, opts v1.ListOptions) (resu
 	}
 	result = &v1alpha1.ControllerConfigList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -97,6 +101,7 @@ func (c *controllerConfigs) Watch(ctx context.Context, opts v1.ListOptions) (wat
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -107,6 +112,7 @@ func (c *controllerConfigs) Watch(ctx context.Context, opts v1.ListOptions) (wat
 func (c *controllerConfigs) Create(ctx context.Context, controllerConfig *v1alpha1.ControllerConfig, opts v1.CreateOptions) (result *v1alpha1.ControllerConfig, err error) {
 	result = &v1alpha1.ControllerConfig{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(controllerConfig).
@@ -119,6 +125,7 @@ func (c *controllerConfigs) Create(ctx context.Context, controllerConfig *v1alph
 func (c *controllerConfigs) Update(ctx context.Context, controllerConfig *v1alpha1.ControllerConfig, opts v1.UpdateOptions) (result *v1alpha1.ControllerConfig, err error) {
 	result = &v1alpha1.ControllerConfig{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		Name(controllerConfig.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -131,6 +138,7 @@ func (c *controllerConfigs) Update(ctx context.Context, controllerConfig *v1alph
 // Delete takes name of the controllerConfig and deletes it. Returns an error if one occurs.
 func (c *controllerConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		Name(name).
 		Body(&opts).
@@ -145,6 +153,7 @@ func (c *controllerConfigs) DeleteCollection(ctx context.Context, opts v1.Delete
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -157,6 +166,7 @@ func (c *controllerConfigs) DeleteCollection(ctx context.Context, opts v1.Delete
 func (c *controllerConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ControllerConfig, err error) {
 	result = &v1alpha1.ControllerConfig{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("controllerconfigs").
 		Name(name).
 		SubResource(subresources...).

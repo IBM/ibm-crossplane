@@ -18,7 +18,7 @@ spec:
     shortNames:
     - xrd
     singular: compositeresourcedefinition
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.conditions[?(@.type=='Established')].status
