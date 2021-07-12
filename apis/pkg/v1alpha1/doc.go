@@ -16,6 +16,6 @@ limitations under the License.
 
 // Package v1alpha1 contains resources relating to Crossplane packages.
 // +kubebuilder:object:generate=true
-// +groupName=pkg.crossplane.io
+// +groupName=pkg.ibm.crossplane.io
 // +versionName=v1alpha1
 package v1alpha1

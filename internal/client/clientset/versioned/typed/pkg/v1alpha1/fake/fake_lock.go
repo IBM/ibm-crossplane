@@ -36,9 +36,9 @@ type FakeLocks struct {
 	ns   string
 }
 
-var locksResource = schema.GroupVersionResource{Group: "pkg.crossplane.io", Version: "v1alpha1", Resource: "locks"}
+var locksResource = schema.GroupVersionResource{Group: "pkg.ibm.crossplane.io", Version: "v1alpha1", Resource: "locks"}
 
-var locksKind = schema.GroupVersionKind{Group: "pkg.crossplane.io", Version: "v1alpha1", Kind: "Lock"}
+var locksKind = schema.GroupVersionKind{Group: "pkg.ibm.crossplane.io", Version: "v1alpha1", Kind: "Lock"}
 
 // Get takes name of the lock, and returns the corresponding lock object, and an error if there is any.
 func (c *FakeLocks) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Lock, err error) {

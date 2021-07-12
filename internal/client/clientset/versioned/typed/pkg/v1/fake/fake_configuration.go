@@ -36,9 +36,9 @@ type FakeConfigurations struct {
 	ns   string
 }
 
-var configurationsResource = schema.GroupVersionResource{Group: "pkg.crossplane.io", Version: "v1", Resource: "configurations"}
+var configurationsResource = schema.GroupVersionResource{Group: "pkg.ibm.crossplane.io", Version: "v1", Resource: "configurations"}
 
-var configurationsKind = schema.GroupVersionKind{Group: "pkg.crossplane.io", Version: "v1", Kind: "Configuration"}
+var configurationsKind = schema.GroupVersionKind{Group: "pkg.ibm.crossplane.io", Version: "v1", Kind: "Configuration"}
 
 // Get takes name of the configuration, and returns the corresponding configuration object, and an error if there is any.
 func (c *FakeConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *pkgv1.Configuration, err error) {

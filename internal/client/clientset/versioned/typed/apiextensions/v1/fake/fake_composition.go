@@ -36,9 +36,9 @@ type FakeCompositions struct {
 	ns   string
 }
 
-var compositionsResource = schema.GroupVersionResource{Group: "apiextensions.crossplane.io", Version: "v1", Resource: "compositions"}
+var compositionsResource = schema.GroupVersionResource{Group: "apiextensions.ibm.crossplane.io", Version: "v1", Resource: "compositions"}
 
-var compositionsKind = schema.GroupVersionKind{Group: "apiextensions.crossplane.io", Version: "v1", Kind: "Composition"}
+var compositionsKind = schema.GroupVersionKind{Group: "apiextensions.ibm.crossplane.io", Version: "v1", Kind: "Composition"}
 
 // Get takes name of the composition, and returns the corresponding composition object, and an error if there is any.
 func (c *FakeCompositions) Get(ctx context.Context, name string, options v1.GetOptions) (result *apiextensionsv1.Composition, err error) {
