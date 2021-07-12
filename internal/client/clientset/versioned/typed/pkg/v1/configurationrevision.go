@@ -33,7 +33,7 @@ import (
 // ConfigurationRevisionsGetter has a method to return a ConfigurationRevisionInterface.
 // A group's client should implement this interface.
 type ConfigurationRevisionsGetter interface {
-	ConfigurationRevisions() ConfigurationRevisionInterface
+	ConfigurationRevisions(namespace string) ConfigurationRevisionInterface
 }
 
 // ConfigurationRevisionInterface has methods to work with ConfigurationRevision resources.
@@ -53,12 +53,14 @@ type ConfigurationRevisionInterface interface {
 // configurationRevisions implements ConfigurationRevisionInterface
 type configurationRevisions struct {
 	client rest.Interface
+	ns     string
 }
 
 // newConfigurationRevisions returns a ConfigurationRevisions
-func newConfigurationRevisions(c *PkgV1Client) *configurationRevisions {
+func newConfigurationRevisions(c *PkgV1Client, namespace string) *configurationRevisions {
 	return &configurationRevisions{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -66,6 +68,7 @@ func newConfigurationRevisions(c *PkgV1Client) *configurationRevisions {
 func (c *configurationRevisions) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ConfigurationRevision, err error) {
 	result = &v1.ConfigurationRevision{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +85,7 @@ func (c *configurationRevisions) List(ctx context.Context, opts metav1.ListOptio
 	}
 	result = &v1.ConfigurationRevisionList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +102,7 @@ func (c *configurationRevisions) Watch(ctx context.Context, opts metav1.ListOpti
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +113,7 @@ func (c *configurationRevisions) Watch(ctx context.Context, opts metav1.ListOpti
 func (c *configurationRevisions) Create(ctx context.Context, configurationRevision *v1.ConfigurationRevision, opts metav1.CreateOptions) (result *v1.ConfigurationRevision, err error) {
 	result = &v1.ConfigurationRevision{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(configurationRevision).
@@ -120,6 +126,7 @@ func (c *configurationRevisions) Create(ctx context.Context, configurationRevisi
 func (c *configurationRevisions) Update(ctx context.Context, configurationRevision *v1.ConfigurationRevision, opts metav1.UpdateOptions) (result *v1.ConfigurationRevision, err error) {
 	result = &v1.ConfigurationRevision{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		Name(configurationRevision.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +141,7 @@ func (c *configurationRevisions) Update(ctx context.Context, configurationRevisi
 func (c *configurationRevisions) UpdateStatus(ctx context.Context, configurationRevision *v1.ConfigurationRevision, opts metav1.UpdateOptions) (result *v1.ConfigurationRevision, err error) {
 	result = &v1.ConfigurationRevision{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		Name(configurationRevision.Name).
 		SubResource("status").
@@ -147,6 +155,7 @@ func (c *configurationRevisions) UpdateStatus(ctx context.Context, configuration
 // Delete takes name of the configurationRevision and deletes it. Returns an error if one occurs.
 func (c *configurationRevisions) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		Name(name).
 		Body(&opts).
@@ -161,6 +170,7 @@ func (c *configurationRevisions) DeleteCollection(ctx context.Context, opts meta
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +183,7 @@ func (c *configurationRevisions) DeleteCollection(ctx context.Context, opts meta
 func (c *configurationRevisions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConfigurationRevision, err error) {
 	result = &v1.ConfigurationRevision{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("configurationrevisions").
 		Name(name).
 		SubResource(subresources...).

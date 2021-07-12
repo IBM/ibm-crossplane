@@ -33,7 +33,7 @@ import (
 // CompositeResourceDefinitionsGetter has a method to return a CompositeResourceDefinitionInterface.
 // A group's client should implement this interface.
 type CompositeResourceDefinitionsGetter interface {
-	CompositeResourceDefinitions() CompositeResourceDefinitionInterface
+	CompositeResourceDefinitions(namespace string) CompositeResourceDefinitionInterface
 }
 
 // CompositeResourceDefinitionInterface has methods to work with CompositeResourceDefinition resources.
@@ -53,12 +53,14 @@ type CompositeResourceDefinitionInterface interface {
 // compositeResourceDefinitions implements CompositeResourceDefinitionInterface
 type compositeResourceDefinitions struct {
 	client rest.Interface
+	ns     string
 }
 
 // newCompositeResourceDefinitions returns a CompositeResourceDefinitions
-func newCompositeResourceDefinitions(c *ApiextensionsV1Client) *compositeResourceDefinitions {
+func newCompositeResourceDefinitions(c *ApiextensionsV1Client, namespace string) *compositeResourceDefinitions {
 	return &compositeResourceDefinitions{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -66,6 +68,7 @@ func newCompositeResourceDefinitions(c *ApiextensionsV1Client) *compositeResourc
 func (c *compositeResourceDefinitions) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CompositeResourceDefinition, err error) {
 	result = &v1.CompositeResourceDefinition{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +85,7 @@ func (c *compositeResourceDefinitions) List(ctx context.Context, opts metav1.Lis
 	}
 	result = &v1.CompositeResourceDefinitionList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +102,7 @@ func (c *compositeResourceDefinitions) Watch(ctx context.Context, opts metav1.Li
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +113,7 @@ func (c *compositeResourceDefinitions) Watch(ctx context.Context, opts metav1.Li
 func (c *compositeResourceDefinitions) Create(ctx context.Context, compositeResourceDefinition *v1.CompositeResourceDefinition, opts metav1.CreateOptions) (result *v1.CompositeResourceDefinition, err error) {
 	result = &v1.CompositeResourceDefinition{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(compositeResourceDefinition).
@@ -120,6 +126,7 @@ func (c *compositeResourceDefinitions) Create(ctx context.Context, compositeReso
 func (c *compositeResourceDefinitions) Update(ctx context.Context, compositeResourceDefinition *v1.CompositeResourceDefinition, opts metav1.UpdateOptions) (result *v1.CompositeResourceDefinition, err error) {
 	result = &v1.CompositeResourceDefinition{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		Name(compositeResourceDefinition.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +141,7 @@ func (c *compositeResourceDefinitions) Update(ctx context.Context, compositeReso
 func (c *compositeResourceDefinitions) UpdateStatus(ctx context.Context, compositeResourceDefinition *v1.CompositeResourceDefinition, opts metav1.UpdateOptions) (result *v1.CompositeResourceDefinition, err error) {
 	result = &v1.CompositeResourceDefinition{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		Name(compositeResourceDefinition.Name).
 		SubResource("status").
@@ -147,6 +155,7 @@ func (c *compositeResourceDefinitions) UpdateStatus(ctx context.Context, composi
 // Delete takes name of the compositeResourceDefinition and deletes it. Returns an error if one occurs.
 func (c *compositeResourceDefinitions) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		Name(name).
 		Body(&opts).
@@ -161,6 +170,7 @@ func (c *compositeResourceDefinitions) DeleteCollection(ctx context.Context, opt
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +183,7 @@ func (c *compositeResourceDefinitions) DeleteCollection(ctx context.Context, opt
 func (c *compositeResourceDefinitions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CompositeResourceDefinition, err error) {
 	result = &v1.CompositeResourceDefinition{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("compositeresourcedefinitions").
 		Name(name).
 		SubResource(subresources...).

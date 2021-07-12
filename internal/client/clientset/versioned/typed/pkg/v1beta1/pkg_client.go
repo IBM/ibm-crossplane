@@ -37,20 +37,20 @@ type PkgV1beta1Client struct {
 	restClient rest.Interface
 }
 
-func (c *PkgV1beta1Client) Configurations() ConfigurationInterface {
-	return newConfigurations(c)
+func (c *PkgV1beta1Client) Configurations(namespace string) ConfigurationInterface {
+	return newConfigurations(c, namespace)
 }
 
-func (c *PkgV1beta1Client) ConfigurationRevisions() ConfigurationRevisionInterface {
-	return newConfigurationRevisions(c)
+func (c *PkgV1beta1Client) ConfigurationRevisions(namespace string) ConfigurationRevisionInterface {
+	return newConfigurationRevisions(c, namespace)
 }
 
-func (c *PkgV1beta1Client) Providers() ProviderInterface {
-	return newProviders(c)
+func (c *PkgV1beta1Client) Providers(namespace string) ProviderInterface {
+	return newProviders(c, namespace)
 }
 
-func (c *PkgV1beta1Client) ProviderRevisions() ProviderRevisionInterface {
-	return newProviderRevisions(c)
+func (c *PkgV1beta1Client) ProviderRevisions(namespace string) ProviderRevisionInterface {
+	return newProviderRevisions(c, namespace)
 }
 
 // NewForConfig creates a new PkgV1beta1Client for the given config.

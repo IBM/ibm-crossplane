@@ -33,6 +33,7 @@ import (
 // FakeControllerConfigs implements ControllerConfigInterface
 type FakeControllerConfigs struct {
 	Fake *FakePkgV1alpha1
+	ns   string
 }
 
 var controllerconfigsResource = schema.GroupVersionResource{Group: "pkg.ibm.crossplane.io", Version: "v1alpha1", Resource: "controllerconfigs"}
@@ -42,7 +43,8 @@ var controllerconfigsKind = schema.GroupVersionKind{Group: "pkg.ibm.crossplane.i
 // Get takes name of the controllerConfig, and returns the corresponding controllerConfig object, and an error if there is any.
 func (c *FakeControllerConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ControllerConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(controllerconfigsResource, name), &v1alpha1.ControllerConfig{})
+		Invokes(testing.NewGetAction(controllerconfigsResource, c.ns, name), &v1alpha1.ControllerConfig{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (c *FakeControllerConfigs) Get(ctx context.Context, name string, options v1
 // List takes label and field selectors, and returns the list of ControllerConfigs that match those selectors.
 func (c *FakeControllerConfigs) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ControllerConfigList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(controllerconfigsResource, controllerconfigsKind, opts), &v1alpha1.ControllerConfigList{})
+		Invokes(testing.NewListAction(controllerconfigsResource, controllerconfigsKind, c.ns, opts), &v1alpha1.ControllerConfigList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -73,13 +76,15 @@ func (c *FakeControllerConfigs) List(ctx context.Context, opts v1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested controllerConfigs.
 func (c *FakeControllerConfigs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(controllerconfigsResource, opts))
+		InvokesWatch(testing.NewWatchAction(controllerconfigsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a controllerConfig and creates it.  Returns the server's representation of the controllerConfig, and an error, if there is any.
 func (c *FakeControllerConfigs) Create(ctx context.Context, controllerConfig *v1alpha1.ControllerConfig, opts v1.CreateOptions) (result *v1alpha1.ControllerConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(controllerconfigsResource, controllerConfig), &v1alpha1.ControllerConfig{})
+		Invokes(testing.NewCreateAction(controllerconfigsResource, c.ns, controllerConfig), &v1alpha1.ControllerConfig{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -89,7 +94,8 @@ func (c *FakeControllerConfigs) Create(ctx context.Context, controllerConfig *v1
 // Update takes the representation of a controllerConfig and updates it. Returns the server's representation of the controllerConfig, and an error, if there is any.
 func (c *FakeControllerConfigs) Update(ctx context.Context, controllerConfig *v1alpha1.ControllerConfig, opts v1.UpdateOptions) (result *v1alpha1.ControllerConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(controllerconfigsResource, controllerConfig), &v1alpha1.ControllerConfig{})
+		Invokes(testing.NewUpdateAction(controllerconfigsResource, c.ns, controllerConfig), &v1alpha1.ControllerConfig{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -99,13 +105,14 @@ func (c *FakeControllerConfigs) Update(ctx context.Context, controllerConfig *v1
 // Delete takes name of the controllerConfig and deletes it. Returns an error if one occurs.
 func (c *FakeControllerConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(controllerconfigsResource, name), &v1alpha1.ControllerConfig{})
+		Invokes(testing.NewDeleteAction(controllerconfigsResource, c.ns, name), &v1alpha1.ControllerConfig{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeControllerConfigs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(controllerconfigsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(controllerconfigsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ControllerConfigList{})
 	return err
@@ -114,7 +121,8 @@ func (c *FakeControllerConfigs) DeleteCollection(ctx context.Context, opts v1.De
 // Patch applies the patch and returns the patched controllerConfig.
 func (c *FakeControllerConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ControllerConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(controllerconfigsResource, name, pt, data, subresources...), &v1alpha1.ControllerConfig{})
+		Invokes(testing.NewPatchSubresourceAction(controllerconfigsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ControllerConfig{})
+
 	if obj == nil {
 		return nil, err
 	}

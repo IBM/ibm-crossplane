@@ -117,7 +117,6 @@ func (d *Dependency) AddNeighbors(...dag.Node) error {
 
 // +kubebuilder:object:root=true
 // +genclient
-// +genclient:nonNamespaced
 
 // Lock is the CRD type that tracks package dependencies.
 // +kubebuilder:subresource:status

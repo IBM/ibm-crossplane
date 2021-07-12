@@ -33,7 +33,7 @@ import (
 // ConfigurationsGetter has a method to return a ConfigurationInterface.
 // A group's client should implement this interface.
 type ConfigurationsGetter interface {
-	Configurations() ConfigurationInterface
+	Configurations(namespace string) ConfigurationInterface
 }
 
 // ConfigurationInterface has methods to work with Configuration resources.
@@ -53,12 +53,14 @@ type ConfigurationInterface interface {
 // configurations implements ConfigurationInterface
 type configurations struct {
 	client rest.Interface
+	ns     string
 }
 
 // newConfigurations returns a Configurations
-func newConfigurations(c *PkgV1beta1Client) *configurations {
+func newConfigurations(c *PkgV1beta1Client, namespace string) *configurations {
 	return &configurations{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -66,6 +68,7 @@ func newConfigurations(c *PkgV1beta1Client) *configurations {
 func (c *configurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Configuration, err error) {
 	result = &v1beta1.Configuration{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("configurations").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +85,7 @@ func (c *configurations) List(ctx context.Context, opts v1.ListOptions) (result 
 	}
 	result = &v1beta1.ConfigurationList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("configurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +102,7 @@ func (c *configurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("configurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +113,7 @@ func (c *configurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.
 func (c *configurations) Create(ctx context.Context, configuration *v1beta1.Configuration, opts v1.CreateOptions) (result *v1beta1.Configuration, err error) {
 	result = &v1beta1.Configuration{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("configurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(configuration).
@@ -120,6 +126,7 @@ func (c *configurations) Create(ctx context.Context, configuration *v1beta1.Conf
 func (c *configurations) Update(ctx context.Context, configuration *v1beta1.Configuration, opts v1.UpdateOptions) (result *v1beta1.Configuration, err error) {
 	result = &v1beta1.Configuration{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("configurations").
 		Name(configuration.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +141,7 @@ func (c *configurations) Update(ctx context.Context, configuration *v1beta1.Conf
 func (c *configurations) UpdateStatus(ctx context.Context, configuration *v1beta1.Configuration, opts v1.UpdateOptions) (result *v1beta1.Configuration, err error) {
 	result = &v1beta1.Configuration{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("configurations").
 		Name(configuration.Name).
 		SubResource("status").
@@ -147,6 +155,7 @@ func (c *configurations) UpdateStatus(ctx context.Context, configuration *v1beta
 // Delete takes name of the configuration and deletes it. Returns an error if one occurs.
 func (c *configurations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("configurations").
 		Name(name).
 		Body(&opts).
@@ -161,6 +170,7 @@ func (c *configurations) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("configurations").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +183,7 @@ func (c *configurations) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 func (c *configurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Configuration, err error) {
 	result = &v1beta1.Configuration{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("configurations").
 		Name(name).
 		SubResource(subresources...).

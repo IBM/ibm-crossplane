@@ -24,7 +24,6 @@ import (
 
 // +kubebuilder:object:root=true
 // +genclient
-// +genclient:nonNamespaced
 
 // Provider is the CRD type for a request to add a provider to Crossplane.
 // +kubebuilder:subresource:status
@@ -69,7 +68,6 @@ type ProviderList struct {
 
 // +kubebuilder:object:root=true
 // +genclient
-// +genclient:nonNamespaced
 
 // A ProviderRevision that has been added to Crossplane.
 // +kubebuilder:subresource:status

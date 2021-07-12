@@ -28,12 +28,12 @@ type FakeApiextensionsV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeApiextensionsV1) CompositeResourceDefinitions() v1.CompositeResourceDefinitionInterface {
-	return &FakeCompositeResourceDefinitions{c}
+func (c *FakeApiextensionsV1) CompositeResourceDefinitions(namespace string) v1.CompositeResourceDefinitionInterface {
+	return &FakeCompositeResourceDefinitions{c, namespace}
 }
 
-func (c *FakeApiextensionsV1) Compositions() v1.CompositionInterface {
-	return &FakeCompositions{c}
+func (c *FakeApiextensionsV1) Compositions(namespace string) v1.CompositionInterface {
+	return &FakeCompositions{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

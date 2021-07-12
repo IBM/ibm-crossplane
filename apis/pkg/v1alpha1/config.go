@@ -128,7 +128,6 @@ type ControllerConfigSpec struct {
 
 // +kubebuilder:object:root=true
 // +genclient
-// +genclient:nonNamespaced
 
 // ControllerConfig is the CRD type for a packaged controller configuration.
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"

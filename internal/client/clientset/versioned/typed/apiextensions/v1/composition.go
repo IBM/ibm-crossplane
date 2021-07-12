@@ -33,7 +33,7 @@ import (
 // CompositionsGetter has a method to return a CompositionInterface.
 // A group's client should implement this interface.
 type CompositionsGetter interface {
-	Compositions() CompositionInterface
+	Compositions(namespace string) CompositionInterface
 }
 
 // CompositionInterface has methods to work with Composition resources.
@@ -53,12 +53,14 @@ type CompositionInterface interface {
 // compositions implements CompositionInterface
 type compositions struct {
 	client rest.Interface
+	ns     string
 }
 
 // newCompositions returns a Compositions
-func newCompositions(c *ApiextensionsV1Client) *compositions {
+func newCompositions(c *ApiextensionsV1Client, namespace string) *compositions {
 	return &compositions{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -66,6 +68,7 @@ func newCompositions(c *ApiextensionsV1Client) *compositions {
 func (c *compositions) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Composition, err error) {
 	result = &v1.Composition{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("compositions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +85,7 @@ func (c *compositions) List(ctx context.Context, opts metav1.ListOptions) (resul
 	}
 	result = &v1.CompositionList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("compositions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +102,7 @@ func (c *compositions) Watch(ctx context.Context, opts metav1.ListOptions) (watc
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("compositions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +113,7 @@ func (c *compositions) Watch(ctx context.Context, opts metav1.ListOptions) (watc
 func (c *compositions) Create(ctx context.Context, composition *v1.Composition, opts metav1.CreateOptions) (result *v1.Composition, err error) {
 	result = &v1.Composition{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("compositions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(composition).
@@ -120,6 +126,7 @@ func (c *compositions) Create(ctx context.Context, composition *v1.Composition, 
 func (c *compositions) Update(ctx context.Context, composition *v1.Composition, opts metav1.UpdateOptions) (result *v1.Composition, err error) {
 	result = &v1.Composition{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("compositions").
 		Name(composition.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +141,7 @@ func (c *compositions) Update(ctx context.Context, composition *v1.Composition, 
 func (c *compositions) UpdateStatus(ctx context.Context, composition *v1.Composition, opts metav1.UpdateOptions) (result *v1.Composition, err error) {
 	result = &v1.Composition{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("compositions").
 		Name(composition.Name).
 		SubResource("status").
@@ -147,6 +155,7 @@ func (c *compositions) UpdateStatus(ctx context.Context, composition *v1.Composi
 // Delete takes name of the composition and deletes it. Returns an error if one occurs.
 func (c *compositions) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("compositions").
 		Name(name).
 		Body(&opts).
@@ -161,6 +170,7 @@ func (c *compositions) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("compositions").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +183,7 @@ func (c *compositions) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 func (c *compositions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Composition, err error) {
 	result = &v1.Composition{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("compositions").
 		Name(name).
 		SubResource(subresources...).
