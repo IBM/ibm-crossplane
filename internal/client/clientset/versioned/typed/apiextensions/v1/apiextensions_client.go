@@ -30,7 +30,7 @@ type ApiextensionsV1Interface interface {
 	CompositionsGetter
 }
 
-// ApiextensionsV1Client is used to interact with features provided by the apiextensions.crossplane.io group.
+// ApiextensionsV1Client is used to interact with features provided by the apiextensions.ibm.crossplane.io group.
 type ApiextensionsV1Client struct {
 	restClient rest.Interface
 }

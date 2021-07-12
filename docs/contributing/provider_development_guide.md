@@ -109,7 +109,7 @@ type FavouriteDBInstanceStatus struct {
 // +kubebuilder:object:root=true
 
 // FavouriteDBInstance is the Schema for the favouritedbinstance API
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Namespaced
 type FavouriteDBInstance struct {
     metav1.TypeMeta   `json:",inline"`
     metav1.ObjectMeta `json:"metadata,omitempty"`

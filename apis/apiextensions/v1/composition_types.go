@@ -598,7 +598,7 @@ type CompositionStatus struct {
 // type is created with reference to the composition.
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,categories=crossplane
+// +kubebuilder:resource:scope=Namespaced,categories=crossplane
 type Composition struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

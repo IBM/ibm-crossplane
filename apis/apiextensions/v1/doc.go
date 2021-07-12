@@ -16,6 +16,6 @@ limitations under the License.
 
 // Package v1 contains API types that extend the Crossplane API.
 // +kubebuilder:object:generate=true
-// +groupName=apiextensions.crossplane.io
+// +groupName=apiextensions.ibm.crossplane.io
 // +versionName=v1
 package v1
