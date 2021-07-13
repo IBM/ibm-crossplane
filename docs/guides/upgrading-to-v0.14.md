@@ -44,7 +44,7 @@ to update your XRDs for v0.14:
 For example, the below XRD:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: CompositeResourceDefinition
 metadata:
   name: compositepostgresqlinstances.database.example.org
@@ -84,7 +84,7 @@ spec:
 Would become:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: CompositeResourceDefinition
 metadata:
   name: compositepostgresqlinstances.database.example.org

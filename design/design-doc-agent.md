@@ -542,7 +542,7 @@ rules:
 - apiGroups: ["apiextensions.kubernetes.io"]
   resources: ["customresourcedefinitions"]
   verbs: ["get", "watch", "list"]
-- apiGroups: ["apiextensions.crossplane.io"]
+- apiGroups: ["apiextensions.ibm.crossplane.io"]
   resources:
   - infrastructuredefinitions
   - infrastructurepublications

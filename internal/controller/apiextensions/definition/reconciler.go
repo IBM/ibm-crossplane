@@ -52,7 +52,7 @@ const (
 
 	timeout        = 2 * time.Minute
 	maxConcurrency = 5
-	finalizer      = "defined.apiextensions.crossplane.io"
+	finalizer      = "defined.apiextensions.ibm.crossplane.io"
 
 	errGetXRD          = "cannot get CompositeResourceDefinition"
 	errRenderCRD       = "cannot render composite resource CustomResourceDefinition"

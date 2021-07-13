@@ -56,7 +56,7 @@ spec:
     image: crossplane/provider-gcp-controller:v0.14.0
     permissionRequests:
     - apiGroups:
-      - apiextensions.crossplane.io
+      - apiextensions.ibm.crossplane.io
       resources:
       - compositions
       verbs:

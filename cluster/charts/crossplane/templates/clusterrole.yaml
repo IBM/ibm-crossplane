@@ -58,7 +58,7 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   - pkg.ibm.crossplane.io
   resources:
   - "*"

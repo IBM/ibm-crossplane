@@ -363,7 +363,7 @@ of a resource class. Unlike resource classes, compositions:
 Here's an example composition:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: Composition
 metadata:
   name: private-mysql-server
@@ -487,7 +487,7 @@ requirement - more on that below.
 Here's an example that defines a new `MySQLInstance` infrastructure resource.
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: InfrastructureDefinition
 metadata:
   # InfrastructureDefinition names are subject to the constraints of Kubernetes
@@ -646,7 +646,7 @@ composed resources.
 Here's an example that publishes the above `MySQLInstance` resource:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: InfrastructurePublication
 metadata:
   # The name of the InfrastructurePublication must match the name of the
@@ -803,7 +803,7 @@ _application operator_.
 Here's an example that defines a new `Wordpress` application resource:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: ApplicationDefinition
 metadata:
   # ApplicationDefinition names are subject to the constraints of Kubernetes
@@ -1126,7 +1126,7 @@ resource form a contract that must be fulfilled by its composed resources. For
 example:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: InfrastructureDefinition
 # ...
 spec:
@@ -1141,7 +1141,7 @@ three connection details in its secret; `username`, `password`, and `endpoint`.
 Each detail must be provided by exactly one composed resource.
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: Composition
 # ...
 spec:
@@ -1173,7 +1173,7 @@ username and password, while the second satisfies the requirement for an
 endpoint.
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: Composition
 # ...
 spec:
@@ -1216,7 +1216,7 @@ help. A detailed design for these possible compositions is outside the scope of
 this document but an example may look as follows:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: HelmComposition
 metadata:
   name: legacy-wordpress-chart
