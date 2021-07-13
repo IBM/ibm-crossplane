@@ -49,22 +49,22 @@ kind: CustomResourceDefinition
 metadata:
   name: test`)
 
-	v1alpha1ProvBytes = []byte(`apiVersion: meta.pkg.crossplane.io/v1alpha1
+	v1alpha1ProvBytes = []byte(`apiVersion: meta.pkg.ibm.crossplane.io/v1alpha1
 kind: Provider
 metadata:
   name: test`)
 
-	v1alpha1ConfBytes = []byte(`apiVersion: meta.pkg.crossplane.io/v1alpha1
+	v1alpha1ConfBytes = []byte(`apiVersion: meta.pkg.ibm.crossplane.io/v1alpha1
 kind: Configuration
 metadata:
   name: test`)
 
-	v1ProvBytes = []byte(`apiVersion: meta.pkg.crossplane.io/v1
+	v1ProvBytes = []byte(`apiVersion: meta.pkg.ibm.crossplane.io/v1
 kind: Provider
 metadata:
   name: test`)
 
-	v1ConfBytes = []byte(`apiVersion: meta.pkg.crossplane.io/v1
+	v1ConfBytes = []byte(`apiVersion: meta.pkg.ibm.crossplane.io/v1
 kind: Configuration
 metadata:
   name: test`)

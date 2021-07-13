@@ -59,7 +59,7 @@ rules:
   - "*"
 - apiGroups:
   - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources:
   - "*"
   verbs:

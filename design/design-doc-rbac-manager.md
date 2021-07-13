@@ -160,7 +160,7 @@ rules:
 # Crossplane has full access to the types it defines.
 - apiGroups:
   - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 # Crossplane has full access to the composite resources and claims it defines.
@@ -288,7 +288,7 @@ rules:
 # Crossplane administrators have full access to built in Crossplane types.
 - apiGroups:
   - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 # Crossplane administrators have full access to all of the composite resources
@@ -334,7 +334,7 @@ rules:
 # Crossplane editors have full access to built in Crossplane types.
 - apiGroups:
   - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 # Crossplane editors have full access to all of the composite resources and
@@ -374,7 +374,7 @@ rules:
 # Crossplane viewers have read-only access to built in Crossplane types.
 - apiGroups:
   - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 # Crossplane viewers have read-only access to all of the composite resources and
@@ -570,7 +570,7 @@ rules:
   verbs: [*]
 - apiGroups:
   - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 ```

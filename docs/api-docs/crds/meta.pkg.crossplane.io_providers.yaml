@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: providers.meta.pkg.crossplane.io
+  name: providers.meta.pkg.ibm.crossplane.io
 spec:
-  group: meta.pkg.crossplane.io
+  group: meta.pkg.ibm.crossplane.io
   names:
     kind: Provider
     listKind: ProviderList

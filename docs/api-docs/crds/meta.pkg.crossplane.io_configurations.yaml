@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: configurations.meta.pkg.crossplane.io
+  name: configurations.meta.pkg.ibm.crossplane.io
 spec:
-  group: meta.pkg.crossplane.io
+  group: meta.pkg.ibm.crossplane.io
   names:
     kind: Configuration
     listKind: ConfigurationList

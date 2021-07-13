@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	parentLabel      = "pkg.crossplane.io/package"
+	parentLabel      = "pkg.ibm.crossplane.io/package"
 	reconcileTimeout = 1 * time.Minute
 
 	shortWait     = 30 * time.Second

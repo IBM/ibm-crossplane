@@ -106,7 +106,7 @@ rules:
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: [providers, configurations, providerrevisions, configurationrevisions]
   verbs: ["*"]
 # Crossplane administrators have access to view CRDs in order to debug XRDs.
@@ -144,7 +144,7 @@ rules:
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: [providers, configurations, providerrevisions, configurationrevisions]
   verbs: ["*"]
 ---
@@ -173,7 +173,7 @@ rules:
   resources: ["*"]
   verbs: [get, list, watch]
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: [providers, configurations, providerrevisions, configurationrevisions]
   verbs: [get, list, watch]
 ---
