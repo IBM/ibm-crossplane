@@ -250,7 +250,7 @@ how to define a composition for a Wordpress application deployed on a Kubernetes
 both created with Crossplane. 
 
 ```
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: Composition
 metadata:
   name: wordpressclusters.apps.example.org
@@ -415,7 +415,7 @@ Our composition will create:
 Infrastructure definition for above composition:
 
 ```
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: InfrastructureDefinition
 metadata:
   name: wordpressclusters.apps.example.org

@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	finalizer        = "finalizer.apiextensions.crossplane.io"
+	finalizer        = "finalizer.apiextensions.ibm.crossplane.io"
 	reconcileTimeout = 1 * time.Minute
 
 	aShortWait = 30 * time.Second

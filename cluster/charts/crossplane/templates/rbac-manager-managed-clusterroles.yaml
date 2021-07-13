@@ -102,11 +102,11 @@ rules:
   verbs: ["*"]
 # Crossplane administrators have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: [providers, configurations, providerrevisions, configurationrevisions]
   verbs: ["*"]
 # Crossplane administrators have access to view CRDs in order to debug XRDs.
@@ -140,11 +140,11 @@ rules:
   verbs: [get, list, watch]
 # Crossplane editors have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: [providers, configurations, providerrevisions, configurationrevisions]
   verbs: ["*"]
 ---
@@ -169,11 +169,11 @@ rules:
   verbs: [get, list, watch]
 # Crossplane viewers have read-only access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: [providers, configurations, providerrevisions, configurationrevisions]
   verbs: [get, list, watch]
 ---
@@ -196,7 +196,7 @@ rules:
 # allows them to discover and select an appropriate composition when creating a
 # resource claim.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 {{- if .Values.rbacManager.managementPolicy }}

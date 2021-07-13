@@ -45,7 +45,7 @@ metadata, which governs how Crossplane will install the package.
 A Provider package contains a `crossplane.yaml` with the following format:
 
 ```yaml
-apiVersion: meta.pkg.crossplane.io/v1
+apiVersion: meta.pkg.ibm.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-gcp
@@ -56,7 +56,7 @@ spec:
     image: crossplane/provider-gcp-controller:v0.14.0
     permissionRequests:
     - apiGroups:
-      - apiextensions.crossplane.io
+      - apiextensions.ibm.crossplane.io
       resources:
       - compositions
       verbs:
@@ -70,7 +70,7 @@ spec:
 
 See all available fields in the [official documentation][provider-docs].
 
-> Note: The `meta.pkg.crossplane.io` group does contain custom resources that
+> Note: The `meta.pkg.ibm.crossplane.io` group does contain custom resources that
 > may be installed into the cluster. They are strictly used as metadata in a
 > Crossplane package.
 
@@ -124,7 +124,7 @@ extension.
 A Configuration package contains a `crossplane.yaml` with the following format:
 
 ```yaml
-apiVersion: meta.pkg.crossplane.io/v1
+apiVersion: meta.pkg.ibm.crossplane.io/v1
 kind: Configuration
 metadata:
   name: my-org-infra
@@ -210,7 +210,7 @@ Packages can also be installed manually by creating a `Provider` or
 creation of the following two resources, which could have been authored by hand:
 
 ```yaml
-apiVersion: pkg.crossplane.io/v1
+apiVersion: pkg.ibm.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-gcp
@@ -222,7 +222,7 @@ spec:
 ```
 
 ```yaml
-apiVersion: pkg.crossplane.io/v1
+apiVersion: pkg.ibm.crossplane.io/v1
 kind: Configuration
 metadata:
   name: my-org-infra
@@ -234,8 +234,8 @@ spec:
 ```
 
 > Note: These types differ from the `Provider` and `Configuration` types we saw
-> earlier. They exist in the `pkg.crossplane.io` group rather than the
-> `meta.pkg.crossplane.io` group and are actual custom resources created in the
+> earlier. They exist in the `pkg.ibm.crossplane.io` group rather than the
+> `meta.pkg.ibm.crossplane.io` group and are actual custom resources created in the
 > cluster.
 
 The default fields specified above can be configured with different values to
@@ -375,7 +375,7 @@ Crossplane creates for the controller. This could be accomplished with the
 following `ControllerConfig` and `Provider`:
 
 ```yaml
-apiVersion: pkg.crossplane.io/v1alpha1
+apiVersion: pkg.ibm.crossplane.io/v1alpha1
 kind: ControllerConfig
 metadata:
   name: aws-config
@@ -385,7 +385,7 @@ spec:
   podSecurityContext:
     fsGroup: 2000
 ---
-apiVersion: pkg.crossplane.io/v1
+apiVersion: pkg.ibm.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-aws
@@ -403,13 +403,13 @@ documentation][controller-config-docs].
 
 [OCI images]: https://github.com/opencontainers/image-spec
 [Providers]: providers.md
-[provider-docs]: https://doc.crds.dev/github.com/crossplane/crossplane/meta.pkg.crossplane.io/Provider/v1
-[configuration-docs]: https://doc.crds.dev/github.com/crossplane/crossplane/meta.pkg.crossplane.io/Configuration/v1
-[lock-api]: https://doc.crds.dev/github.com/crossplane/crossplane/pkg.crossplane.io/Lock/v1alpha1
+[provider-docs]: https://doc.crds.dev/github.com/crossplane/crossplane/meta.pkg.ibm.crossplane.io/Provider/v1
+[configuration-docs]: https://doc.crds.dev/github.com/crossplane/crossplane/meta.pkg.ibm.crossplane.io/Configuration/v1
+[lock-api]: https://doc.crds.dev/github.com/crossplane/crossplane/pkg.ibm.crossplane.io/Lock/v1alpha1
 [getting-started-with-gcp]: https://github.com/crossplane/crossplane/tree/master/docs/snippets/package/gcp
 [specification]: https://github.com/Masterminds/semver#basic-comparisons
 [composition]: composition.md
 [IAM Roles for Service Accounts]: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
-[controller-config-docs]: https://doc.crds.dev/github.com/crossplane/crossplane/pkg.crossplane.io/ControllerConfig/v1alpha1
+[controller-config-docs]: https://doc.crds.dev/github.com/crossplane/crossplane/pkg.ibm.crossplane.io/ControllerConfig/v1alpha1
 [package format]: https://github.com/crossplane/crossplane/blob/1aa83092172bdf0d2ed64754d33517c612ff7368/design/one-pager-package-format-v2.md
 [provider-gcp]: https://github.com/crossplane/provider-gcp/tree/master/package

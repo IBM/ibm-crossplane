@@ -159,8 +159,8 @@ rules:
   verbs: [get, create, update, delete]
 # Crossplane has full access to the types it defines.
 - apiGroups:
-  - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - apiextensions.ibm.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 # Crossplane has full access to the composite resources and claims it defines.
@@ -287,8 +287,8 @@ rules:
   verbs: [*]
 # Crossplane administrators have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - apiextensions.ibm.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 # Crossplane administrators have full access to all of the composite resources
@@ -333,8 +333,8 @@ rules:
   verbs: [get, list, watch]
 # Crossplane editors have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - apiextensions.ibm.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 # Crossplane editors have full access to all of the composite resources and
@@ -373,8 +373,8 @@ rules:
   verbs: [get, list, watch]
 # Crossplane viewers have read-only access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - apiextensions.ibm.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 # Crossplane viewers have read-only access to all of the composite resources and
@@ -412,7 +412,7 @@ rules:
 # allows them to discover and select an appropriate composition when creating a
 # resource claim.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 # Crossplane browsers have read-only access to all of the composite resources it
@@ -569,8 +569,8 @@ rules:
   resources: [clusterrolebindings, rolebindings]
   verbs: [*]
 - apiGroups:
-  - apiextensions.crossplane.io
-  - pkg.crossplane.io
+  - apiextensions.ibm.crossplane.io
+  - pkg.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 ```

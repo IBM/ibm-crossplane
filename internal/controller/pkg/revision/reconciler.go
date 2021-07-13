@@ -50,7 +50,7 @@ const (
 )
 
 const (
-	finalizer = "revision.pkg.crossplane.io"
+	finalizer = "revision.pkg.ibm.crossplane.io"
 
 	errGetPackageRevision = "cannot get package revision"
 	errUpdateStatus       = "cannot update package revision status"

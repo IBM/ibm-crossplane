@@ -375,7 +375,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Applicator: resource.ApplyFn(func(_ context.Context, o runtime.Object, _ ...resource.ApplyOption) error {
 							want := &v1.ConfigurationRevision{}
-							want.SetLabels(map[string]string{"pkg.crossplane.io/package": "test"})
+							want.SetLabels(map[string]string{"pkg.ibm.crossplane.io/package": "test"})
 							want.SetName("test-1234567")
 							want.SetOwnerReferences([]metav1.OwnerReference{{
 								APIVersion:         v1.SchemeGroupVersion.String(),
@@ -591,7 +591,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Applicator: resource.ApplyFn(func(_ context.Context, o runtime.Object, _ ...resource.ApplyOption) error {
 							want := &v1.ConfigurationRevision{}
-							want.SetLabels(map[string]string{"pkg.crossplane.io/package": "test"})
+							want.SetLabels(map[string]string{"pkg.ibm.crossplane.io/package": "test"})
 							want.SetName("test-1234567")
 							want.SetOwnerReferences([]metav1.OwnerReference{{
 								APIVersion:         v1.SchemeGroupVersion.String(),

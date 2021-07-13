@@ -44,7 +44,7 @@ to update your XRDs for v0.14:
 For example, the below XRD:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: CompositeResourceDefinition
 metadata:
   name: compositepostgresqlinstances.database.example.org
@@ -84,7 +84,7 @@ spec:
 Would become:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1alpha1
+apiVersion: apiextensions.ibm.crossplane.io/v1alpha1
 kind: CompositeResourceDefinition
 metadata:
   name: compositepostgresqlinstances.database.example.org
@@ -126,7 +126,7 @@ spec:
 ## Updating Packages
 
 A minor breaking change was made to on-disk package types
-(`meta.pkg.crossplane.io`). In v0.13, the `spec.crossplane` field was present to
+(`meta.pkg.ibm.crossplane.io`). In v0.13, the `spec.crossplane` field was present to
 specify a compatible Crossplane version range, but it was not honored by the
 package manager when packages were installed. The field was refactored to
 `spec.crossplane.version` meaning that packages that previously specified
@@ -141,7 +141,7 @@ The following example shows how a `Configuration` package that specified
 will be honored by the package manager in v0.14:
 
 ```yaml
-apiVersion: meta.pkg.crossplane.io/v1alpha1
+apiVersion: meta.pkg.ibm.crossplane.io/v1alpha1
 kind: Configuration
 metadata:
   name: my-configuration
@@ -152,7 +152,7 @@ spec:
 Would become:
 
 ```yaml
-apiVersion: meta.pkg.crossplane.io/v1alpha1
+apiVersion: meta.pkg.ibm.crossplane.io/v1alpha1
 kind: Configuration
 metadata:
   name: my-configuration

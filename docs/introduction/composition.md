@@ -89,7 +89,7 @@ There are two steps to this process:
 Composite resources are defined by a `CompositeResourceDefinition`:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1
+apiVersion: apiextensions.ibm.crossplane.io/v1
 kind: CompositeResourceDefinition
 metadata:
   # XRDs follow the constraints of CRD names. They must be named
@@ -193,13 +193,13 @@ $ kubectl describe xrd compositemysqlinstances.example.org
 Name:         compositemysqlinstances.example.org
 Namespace:
 Labels:       <none>
-Annotations:  API Version:  apiextensions.crossplane.io/v1
+Annotations:  API Version:  apiextensions.ibm.crossplane.io/v1
 Kind:         CompositeResourceDefinition
 Metadata:
   Creation Timestamp:  2020-05-15T05:30:44Z
   Generation:        1
   Resource Version:  1418120
-  Self Link:         /apis/apiextensions.crossplane.io/v1/compositeresourcedefinitions/compositemysqlinstances.example.org
+  Self Link:         /apis/apiextensions.ibm.crossplane.io/v1/compositeresourcedefinitions/compositemysqlinstances.example.org
   UID:               f8fedfaf-4dfd-4b8a-8228-6af0f4abd7a0
 Spec:
   Connection Secret Keys:
@@ -264,9 +264,9 @@ Status:
 Events:
   Type    Reason                          Age                  From                                                                Message
   ----    ------                          ----                 ----                                                                -------
-  Normal  ApplyCompositeResourceDefinition   4m10s                apiextension/compositeresourcedefinition.apiextensions.crossplane.io  waiting for CustomResourceDefinition to be established
-  Normal  RenderCustomResourceDefinition  55s (x8 over 4m10s)  apiextension/compositeresourcedefinition.apiextensions.crossplane.io  Rendered CustomResourceDefinition
-  Normal  ApplyCompositeResourceDefinition   55s (x7 over 4m9s)   apiextension/compositeresourcedefinition.apiextensions.crossplane.io  Applied CustomResourceDefinition and (re)started composite controller
+  Normal  ApplyCompositeResourceDefinition   4m10s                apiextension/compositeresourcedefinition.apiextensions.ibm.crossplane.io  waiting for CustomResourceDefinition to be established
+  Normal  RenderCustomResourceDefinition  55s (x8 over 4m10s)  apiextension/compositeresourcedefinition.apiextensions.ibm.crossplane.io  Rendered CustomResourceDefinition
+  Normal  ApplyCompositeResourceDefinition   55s (x7 over 4m9s)   apiextension/compositeresourcedefinition.apiextensions.ibm.crossplane.io  Applied CustomResourceDefinition and (re)started composite controller
 ```
 
 ### Specify How Your Resource May Be Composed
@@ -301,7 +301,7 @@ previous section by composing an Azure SQL server, firewall rule, and resource
 group:
 
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1
+apiVersion: apiextensions.ibm.crossplane.io/v1
 kind: Composition
 metadata:
   name: example-azure
@@ -762,7 +762,7 @@ Kind:         MySQLInstance
 Metadata:
   Creation Timestamp:  2020-05-15T07:08:11Z
   Finalizers:
-    finalizer.apiextensions.crossplane.io
+    finalizer.apiextensions.ibm.crossplane.io
   Generation:        3
   Resource Version:  1428420
   Self Link:         /apis/example.org/v1alpha1/namespaces/default/mysqlinstances/example

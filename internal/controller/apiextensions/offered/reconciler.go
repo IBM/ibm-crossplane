@@ -52,7 +52,7 @@ const (
 
 	timeout        = 1 * time.Minute
 	maxConcurrency = 5
-	finalizer      = "offered.apiextensions.crossplane.io"
+	finalizer      = "offered.apiextensions.ibm.crossplane.io"
 )
 
 // Error strings.
