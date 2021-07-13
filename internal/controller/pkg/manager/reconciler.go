@@ -334,6 +334,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 
 	// Create the non-existent package revision.
 	pr.SetName(revisionName)
+	pr.SetNamespace(req.Namespace)
 	pr.SetLabels(map[string]string{parentLabel: p.GetName()})
 	pr.SetSource(p.GetSource())
 	pr.SetPackagePullPolicy(p.GetPackagePullPolicy())
