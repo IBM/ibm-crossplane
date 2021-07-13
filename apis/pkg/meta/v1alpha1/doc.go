@@ -16,6 +16,6 @@ limitations under the License.
 
 // Package v1alpha1 contains meta types used to configure Crossplane packages.
 // +kubebuilder:object:generate=true
-// +groupName=meta.pkg.crossplane.io
+// +groupName=meta.pkg.ibm.crossplane.io
 // +versionName=v1alpha1
 package v1alpha1

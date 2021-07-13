@@ -25,7 +25,7 @@ import (
 
 // Package type metadata.
 const (
-	Group   = "meta.pkg.crossplane.io"
+	Group   = "meta.pkg.ibm.crossplane.io"
 	Version = "v1alpha1"
 )
 
