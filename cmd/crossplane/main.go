@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -30,6 +31,7 @@ import (
 )
 
 func main() {
+	fmt.Println("START PP *************")
 	var (
 		app   = kingpin.New(filepath.Base(os.Args[0]), "An open source multicloud control plane.").DefaultEnvars()
 		debug = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
