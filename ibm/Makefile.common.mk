@@ -43,6 +43,8 @@ config-docker: get-cluster-credentials
 BUILD_LOCALLY ?= 1
 IMAGE_NAME ?= ibm-crossplane
 RELEASE_VERSION ?= $(shell cat RELEASE_VERSION)
+GIT_VERSION ?= $(shell git describe --exact-match 2> /dev/null || \
+                 	   git describe --match=$(git rev-parse --short=8 HEAD) --always --dirty --abbrev=8)
 GO_SUPPORTED_VERSIONS = 1.14|1.15
 
 export OSBASEIMAGE=registry.access.redhat.com/ubi8/ubi-minimal:latest
@@ -79,6 +81,7 @@ ifeq ($(BUILD_LOCALLY),1)
 	@make image-ppc64le
 	@make image-s390x
 	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64,linux/ppc64le,linux/s390x --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
+	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64,linux/ppc64le,linux/s390x --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-$(GIT_VERSION) || $(FAIL)
 else
 	@make config-docker
 	@make build.all
@@ -86,6 +89,7 @@ else
 	@make image-ppc64le
 	@make image-s390x
 	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64,linux/ppc64le,linux/s390x --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION) || $(FAIL)
+	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms linux/amd64,linux/ppc64le,linux/s390x --template $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-ARCH --target $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(RELEASE_VERSION)-$(GIT_VERSION) || $(FAIL)
 endif
 
 
