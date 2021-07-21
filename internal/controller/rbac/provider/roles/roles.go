@@ -19,6 +19,7 @@ package roles
 import (
 	"sort"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +46,7 @@ const (
 	pluralEvents     = "events"
 	pluralConfigmaps = "configmaps"
 	pluralSecrets    = "secrets"
+	pluralLeases     = "leases"
 )
 
 var (
@@ -59,11 +61,12 @@ var (
 //
 // * Secrets for provider credentials and connection secrets.
 // * ConfigMaps for leader election.
+// * Leases for leader election.
 // * Events for debugging.
 var rulesSystemExtra = []rbacv1.PolicyRule{
 	{
-		APIGroups: []string{""},
-		Resources: []string{pluralSecrets, pluralConfigmaps, pluralEvents},
+		APIGroups: []string{"", coordinationv1.GroupName},
+		Resources: []string{pluralSecrets, pluralConfigmaps, pluralEvents, pluralLeases},
 		Verbs:     verbsEdit,
 	},
 }

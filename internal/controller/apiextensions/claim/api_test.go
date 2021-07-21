@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 	"github.com/crossplane/crossplane-runtime/pkg/resource/fake"
 	"github.com/crossplane/crossplane-runtime/pkg/test"
@@ -53,11 +54,59 @@ func TestBind(t *testing.T) {
 	}
 
 	cases := map[string]struct {
-		reason string
-		fields fields
-		args   args
-		want   error
+		reason    string
+		fields    fields
+		args      args
+		want      error
+		wantClaim resource.CompositeClaim
 	}{
+		"ReconcileXRCExtNameFromXR": {
+			reason: "If existing XR already has an external-name, XRC's external-name should be set from it",
+			fields: fields{
+				c: &test.MockClient{
+					MockUpdate: test.NewMockUpdateFn(nil),
+				},
+				t: fake.SchemeWith(&fake.Composite{}, &fake.CompositeClaim{}),
+			},
+			args: args{
+				cm: &fake.CompositeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							meta.AnnotationKeyExternalName: "name-from-claim",
+						},
+					},
+					CompositeResourceReferencer: fake.CompositeResourceReferencer{
+						Ref: &corev1.ObjectReference{
+							APIVersion: fake.GVK(&fake.Composite{}).GroupVersion().String(),
+							Kind:       fake.GVK(&fake.Composite{}).Kind,
+							Name:       "wat",
+						},
+					},
+				},
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "wat",
+						Annotations: map[string]string{
+							meta.AnnotationKeyExternalName: "name-from-composite",
+						},
+					},
+				},
+			},
+			wantClaim: &fake.CompositeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						meta.AnnotationKeyExternalName: "name-from-composite",
+					},
+				},
+				CompositeResourceReferencer: fake.CompositeResourceReferencer{
+					Ref: &corev1.ObjectReference{
+						APIVersion: fake.GVK(&fake.Composite{}).GroupVersion().String(),
+						Kind:       fake.GVK(&fake.Composite{}).Kind,
+						Name:       "wat",
+					},
+				},
+			},
+		},
 		"CompositeRefConflict": {
 			reason: "An error should be returned if the claim is bound to another composite resource",
 			fields: fields{
@@ -138,7 +187,7 @@ func TestBind(t *testing.T) {
 			reason: "Errors updating the composite resource should be returned",
 			fields: fields{
 				c: &test.MockClient{
-					MockUpdate: test.NewMockUpdateFn(nil, func(obj runtime.Object) error {
+					MockUpdate: test.NewMockUpdateFn(nil, func(obj client.Object) error {
 						if _, ok := obj.(*fake.Composite); ok {
 							return errBoom
 						}
@@ -175,6 +224,14 @@ func TestBind(t *testing.T) {
 			got := b.Bind(tc.args.ctx, tc.args.cm, tc.args.cp)
 			if diff := cmp.Diff(tc.want, got, test.EquateErrors()); diff != "" {
 				t.Errorf("b.Bind(...): %s\n-want, +got:\n%s\n", tc.reason, diff)
+			}
+			if got != nil {
+				return
+			}
+
+			// if no error, then assert the claim
+			if diff := cmp.Diff(tc.wantClaim, tc.args.cm); diff != "" {
+				t.Errorf("b.Bind(...): %s\n-wantClaim, +gotClaim:\n%s\n", tc.reason, diff)
 			}
 		})
 	}
@@ -284,12 +341,12 @@ func TestPropagateConnection(t *testing.T) {
 			reason: "Errors applying the claim connection secret should be returned",
 			fields: fields{
 				client: resource.ClientApplicator{
-					Client: &test.MockClient{MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+					Client: &test.MockClient{MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 						s := resource.ConnectionSecretFor(cp, fake.GVK(cp))
 						*o.(*corev1.Secret) = *s
 						return nil
 					})},
-					Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error { return errBoom }),
+					Applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error { return errBoom }),
 				},
 				typer: fake.SchemeWith(cp, cm),
 			},
@@ -306,7 +363,7 @@ func TestPropagateConnection(t *testing.T) {
 			fields: fields{
 				client: resource.ClientApplicator{
 					Client: &test.MockClient{
-						MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+						MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 							// The managed secret has some data when we get it.
 							s := resource.ConnectionSecretFor(cp, fake.GVK(cp))
 							s.Data = mgcsdata
@@ -315,7 +372,7 @@ func TestPropagateConnection(t *testing.T) {
 							return nil
 						}),
 					},
-					Applicator: resource.ApplyFn(func(ctx context.Context, o runtime.Object, _ ...resource.ApplyOption) error {
+					Applicator: resource.ApplyFn(func(ctx context.Context, o client.Object, _ ...resource.ApplyOption) error {
 						// Simulate a no-op change by not allowing the update.
 						return resource.AllowUpdateIf(func(_, _ runtime.Object) bool { return false })(ctx, o, o)
 					}),
@@ -335,7 +392,7 @@ func TestPropagateConnection(t *testing.T) {
 			fields: fields{
 				client: resource.ClientApplicator{
 					Client: &test.MockClient{
-						MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+						MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 							// The managed secret has some data when we get it.
 							s := resource.ConnectionSecretFor(cp, fake.GVK(cp))
 							s.Data = mgcsdata
@@ -344,7 +401,7 @@ func TestPropagateConnection(t *testing.T) {
 							return nil
 						}),
 					},
-					Applicator: resource.ApplyFn(func(_ context.Context, o runtime.Object, _ ...resource.ApplyOption) error {
+					Applicator: resource.ApplyFn(func(_ context.Context, o client.Object, _ ...resource.ApplyOption) error {
 						// Ensure the managed secret's data is copied to the
 						// claim secret, and that the claim secret is annotated
 						// to allow constant propagation from the managed

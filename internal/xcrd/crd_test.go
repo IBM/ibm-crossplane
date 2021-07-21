@@ -80,7 +80,42 @@ func TestForCompositeResource(t *testing.T) {
 	singular := "coolcomposite"
 	plural := "coolcomposites"
 
-	schema := `{"required":["spec"],"properties":{"spec":{"required":["storageGB","engineVersion"],"properties":{"engineVersion":{"enum":["5.6","5.7"],"type":"string"},"storageGB":{"type":"integer"}},"type":"object"}},"type":"object"}`
+	schema := `
+{
+  "required": [
+    "spec"
+  ],
+  "properties": {
+    "spec": {
+      "required": [
+        "storageGB",
+        "engineVersion"
+      ],
+      "properties": {
+        "engineVersion": {
+          "enum": [
+            "5.6",
+            "5.7"
+          ],
+          "type": "string"
+        },
+        "storageGB": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "status": {
+      "properties": {
+        "phase": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "type": "object"
+}`
 
 	d := &v1.CompositeResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
@@ -239,6 +274,7 @@ func TestForCompositeResource(t *testing.T) {
 							"status": {
 								Type: "object",
 								Properties: map[string]extv1.JSONSchemaProps{
+									"phase": {Type: "string"},
 
 									// From CompositeResourceStatusProps()
 									"conditions": {
@@ -262,15 +298,6 @@ func TestForCompositeResource(t *testing.T) {
 										Type: "object",
 										Properties: map[string]extv1.JSONSchemaProps{
 											"lastPublishedTime": {Type: "string", Format: "date-time"},
-										},
-									},
-									"resourceRef": {
-										Type:     "object",
-										Required: []string{"apiVersion", "kind", "name"},
-										Properties: map[string]extv1.JSONSchemaProps{
-											"apiVersion": {Type: "string"},
-											"kind":       {Type: "string"},
-											"name":       {Type: "string"},
 										},
 									},
 								},
@@ -408,7 +435,39 @@ func TestForCompositeResourceClaim(t *testing.T) {
 	claimSingular := "coolclaim"
 	claimPlural := "coolclaims"
 
-	schema := `{"properties":{"spec":{"required":["storageGB","engineVersion"],"properties":{"engineVersion":{"enum":["5.6","5.7"],"type":"string"},"storageGB":{"type":"integer"}},"type":"object"}},"type":"object"}`
+	schema := `
+{
+	"properties": {
+		"spec": {
+			"required": [
+				"storageGB",
+				"engineVersion"
+			],
+			"properties": {
+				"engineVersion": {
+					"enum": [
+						"5.6",
+						"5.7"
+					],
+					"type": "string"
+				},
+				"storageGB": {
+					"type": "integer"
+				}
+			},
+			"type": "object"
+		},
+		"status": {
+      "properties": {
+        "phase": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+	},
+	"type": "object"
+}`
 
 	d := &v1.CompositeResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
@@ -558,6 +617,7 @@ func TestForCompositeResourceClaim(t *testing.T) {
 								"status": {
 									Type: "object",
 									Properties: map[string]extv1.JSONSchemaProps{
+										"phase": {Type: "string"},
 
 										// From CompositeResourceStatusProps()
 										"conditions": {
@@ -581,15 +641,6 @@ func TestForCompositeResourceClaim(t *testing.T) {
 											Type: "object",
 											Properties: map[string]extv1.JSONSchemaProps{
 												"lastPublishedTime": {Type: "string", Format: "date-time"},
-											},
-										},
-										"resourceRef": {
-											Type:     "object",
-											Required: []string{"apiVersion", "kind", "name"},
-											Properties: map[string]extv1.JSONSchemaProps{
-												"apiVersion": {Type: "string"},
-												"kind":       {Type: "string"},
-												"name":       {Type: "string"},
 											},
 										},
 									},
