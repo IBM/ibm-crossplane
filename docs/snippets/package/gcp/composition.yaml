@@ -12,7 +12,8 @@ spec:
     apiVersion: database.example.org/v1alpha1
     kind: CompositePostgreSQLInstance
   resources:
-    - base:
+    - name: cloudsqlinstance
+      base:
         apiVersion: database.gcp.crossplane.io/v1beta1
         kind: CloudSQLInstance
         spec:
@@ -41,5 +42,6 @@ spec:
         - fromConnectionSecretKey: username
         - fromConnectionSecretKey: password
         - fromConnectionSecretKey: endpoint
-        - name: port
+        - type: FromValue
+          name: port
           value: "5432"
