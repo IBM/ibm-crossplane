@@ -300,6 +300,16 @@ func TestForCompositeResource(t *testing.T) {
 											"lastPublishedTime": {Type: "string", Format: "date-time"},
 										},
 									},
+									// IBM Patch: Move resourceRef to status
+									"resourceRef": {
+										Type:     "object",
+										Required: []string{"apiVersion", "kind", "name"},
+										Properties: map[string]extv1.JSONSchemaProps{
+											"apiVersion": {Type: "string"},
+											"kind":       {Type: "string"},
+											"name":       {Type: "string"},
+										},
+									},
 								},
 							},
 						},
@@ -641,6 +651,16 @@ func TestForCompositeResourceClaim(t *testing.T) {
 											Type: "object",
 											Properties: map[string]extv1.JSONSchemaProps{
 												"lastPublishedTime": {Type: "string", Format: "date-time"},
+											},
+										},
+										// IBM Patch: Move resourceRef to status
+										"resourceRef": {
+											Type:     "object",
+											Required: []string{"apiVersion", "kind", "name"},
+											Properties: map[string]extv1.JSONSchemaProps{
+												"apiVersion": {Type: "string"},
+												"kind":       {Type: "string"},
+												"name":       {Type: "string"},
 											},
 										},
 									},

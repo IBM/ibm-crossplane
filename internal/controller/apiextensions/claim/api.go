@@ -120,7 +120,7 @@ func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
 }
 
 // SetResourceRef - you can set resourceRef or you can remove it , if you set nil
-func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
+func SetResourceRef(ctx context.Context, c client.StatusClient, cm resource.Object, resourceRef interface{}) error {
 	data, ok := cm.(*claim.Unstructured)
 	if !ok {
 		return nil
