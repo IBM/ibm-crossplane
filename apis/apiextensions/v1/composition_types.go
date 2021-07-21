@@ -150,6 +150,17 @@ func TypeReferenceTo(gvk schema.GroupVersionKind) TypeReference {
 // ComposedTemplate is used to provide information about how the composed resource
 // should be processed.
 type ComposedTemplate struct {
+	// TODO(negz): Name should be a required field in v2 of this API.
+
+	// A Name uniquely identifies this entry within its Composition's resources
+	// array. Names are optional but *strongly* recommended. When all entries in
+	// the resources array are named entries may added, deleted, and reordered
+	// as long as their names do not change. When entries are not named the
+	// length and order of the resources array should be treated as immutable.
+	// Either all or no entries must be named.
+	// +optional
+	Name *string `json:"name,omitempty"`
+
 	// Base is the target resource that the patches will be applied on.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:EmbeddedResource
@@ -171,15 +182,15 @@ type ComposedTemplate struct {
 	ReadinessChecks []ReadinessCheck `json:"readinessChecks,omitempty"`
 }
 
-// TypeReadinessCheck is used for readiness check types.
-type TypeReadinessCheck string
+// ReadinessCheckType is used for readiness check types.
+type ReadinessCheckType string
 
 // The possible values for readiness check type.
 const (
-	ReadinessCheckNonEmpty     TypeReadinessCheck = "NonEmpty"
-	ReadinessCheckMatchString  TypeReadinessCheck = "MatchString"
-	ReadinessCheckMatchInteger TypeReadinessCheck = "MatchInteger"
-	ReadinessCheckNone         TypeReadinessCheck = "None"
+	ReadinessCheckTypeNonEmpty     ReadinessCheckType = "NonEmpty"
+	ReadinessCheckTypeMatchString  ReadinessCheckType = "MatchString"
+	ReadinessCheckTypeMatchInteger ReadinessCheckType = "MatchInteger"
+	ReadinessCheckTypeNone         ReadinessCheckType = "None"
 )
 
 // ReadinessCheck is used to indicate how to tell whether a resource is ready
@@ -187,7 +198,7 @@ const (
 type ReadinessCheck struct {
 	// Type indicates the type of probe you'd like to use.
 	// +kubebuilder:validation:Enum="MatchString";"MatchInteger";"NonEmpty";"None"
-	Type TypeReadinessCheck `json:"type"`
+	Type ReadinessCheckType `json:"type"`
 
 	// FieldPath shows the path of the field whose value will be used.
 	// +optional
@@ -209,6 +220,7 @@ type PatchType string
 const (
 	PatchTypeFromCompositeFieldPath PatchType = "FromCompositeFieldPath" // Default
 	PatchTypePatchSet               PatchType = "PatchSet"
+	PatchTypeToCompositeFieldPath   PatchType = "ToCompositeFieldPath"
 )
 
 // Patch objects are applied between composite and composed resources. Their
@@ -219,18 +231,19 @@ type Patch struct {
 	// Type sets the patching behaviour to be used. Each patch type may require
 	// its' own fields to be set on the Patch object.
 	// +optional
-	// +kubebuilder:validation:Enum=FromCompositeFieldPath;PatchSet
+	// +kubebuilder:validation:Enum=FromCompositeFieldPath;PatchSet;ToCompositeFieldPath
 	// +kubebuilder:default=FromCompositeFieldPath
 	Type PatchType `json:"type,omitempty"`
 
-	// FromFieldPath is the path of the field on the upstream resource whose value
-	// to be used as input. Required when type is FromCompositeFieldPath.
+	// FromFieldPath is the path of the field on the resource whose value is
+	// to be used as input. Required when type is FromCompositeFieldPath or
+	// ToCompositeFieldPath.
 	// +optional
 	FromFieldPath *string `json:"fromFieldPath,omitempty"`
 
-	// ToFieldPath is the path of the field on the base resource whose value will
+	// ToFieldPath is the path of the field on the resource whose value will
 	// be changed with the result of transforms. Leave empty if you'd like to
-	// propagate to the same path on the target resource.
+	// propagate to the same path as fromFieldPath.
 	// +optional
 	ToFieldPath *string `json:"toFieldPath,omitempty"`
 
@@ -242,23 +255,69 @@ type Patch struct {
 	// input to be transformed.
 	// +optional
 	Transforms []Transform `json:"transforms,omitempty"`
+
+	// Policy configures the specifics of patching behaviour.
+	// +optional
+	Policy *PatchPolicy `json:"policy,omitempty"`
+}
+
+// A FromFieldPathPolicy determines how to patch from a field path.
+type FromFieldPathPolicy string
+
+// FromFieldPath patch policies.
+const (
+	FromFieldPathPolicyOptional FromFieldPathPolicy = "Optional"
+	FromFieldPathPolicyRequired FromFieldPathPolicy = "Required"
+)
+
+// A PatchPolicy configures the specifics of patching behaviour.
+type PatchPolicy struct {
+	// FromFieldPath specifies how to patch from a field path. The default is
+	// 'Optional', which means the patch will be a no-op if the specified
+	// fromFieldPath does not exist. Use 'Required' if the patch should fail if
+	// the specified path does not exist.
+	// +kubebuilder:validation:Enum=Optional;Required
+	// +optional
+	FromFieldPath *FromFieldPathPolicy `json:"fromFieldPath,omitempty"`
 }
 
 // Apply executes a patching operation between the from and to resources.
-func (c *Patch) Apply(from, to runtime.Object) error {
+// Applies all patch types unless an 'only' filter is supplied.
+func (c *Patch) Apply(from, to runtime.Object, only ...PatchType) error {
+	if c.filterPatch(only...) {
+		return nil
+	}
+
 	switch c.Type {
 	case PatchTypeFromCompositeFieldPath:
-		return c.applyFromCompositeFieldPatch(from, to)
+		return c.applyFromFieldPathPatch(from, to)
+	case PatchTypeToCompositeFieldPath:
+		return c.applyFromFieldPathPatch(to, from)
 	case PatchTypePatchSet:
 		// Already resolved - nothing to do.
 	}
 	return errors.Errorf(errInvalidPatchType, c.Type)
 }
 
-// applyFromCompositeFieldPatch patches the composed resource, using a source field
-// on the composite resource. Values may be transformed if any are defined on
+// filterPatch returns true if patch should be filtered (not applied)
+func (c *Patch) filterPatch(only ...PatchType) bool {
+	// filter does not apply if not set
+	if len(only) == 0 {
+		return false
+	}
+
+	for _, patchType := range only {
+		if patchType == c.Type {
+			return false
+		}
+	}
+	return true
+}
+
+// applyFromFieldPathPatch patches the "to" resource, using a source field
+// on the "from" resource. Values may be transformed if any are defined on
 // the patch.
-func (c *Patch) applyFromCompositeFieldPatch(from, to runtime.Object) error { // nolint:gocyclo
+func (c *Patch) applyFromFieldPathPatch(from, to runtime.Object) error { // nolint:gocyclo
 	// NOTE(benagricola): The cyclomatic complexity here is from error checking
 	// at each stage of the patching process, in addition to Apply methods now
 	// being responsible for checking the validity of their input fields
@@ -279,17 +338,10 @@ func (c *Patch) applyFromCompositeFieldPatch(from, to runtime.Object) error { //
 	}
 
 	in, err := fieldpath.Pave(fromMap).GetValue(*c.FromFieldPath)
-	if fieldpath.IsNotFound(err) {
-		// A composition may want to opportunistically patch from a field path
-		// that may or may not exist in the composite, for example by patching
-		// {fromFieldPath: metadata.labels, toFieldPath: metadata.labels}. We
-		// don't consider a reference to a non-existent path to be an issue; if
-		// the relevant toFieldPath is required by the composed resource we'll
-		// report that fact when we attempt to reconcile the composite.
-		return nil
-	}
-	if err != nil {
+	if noop, err := FieldNotFoundNoop(err, c.Policy); err != nil {
 		return err
+	} else if noop {
+		return nil
 	}
 	out := in
 	for i, f := range c.Transforms {
@@ -312,6 +364,30 @@ func (c *Patch) applyFromCompositeFieldPatch(from, to runtime.Object) error { //
 	return runtime.DefaultUnstructuredConverter.FromUnstructured(toMap, to)
 }
 
+// FieldNotFoundNoop returns whether a patch is a no-op, valid patch, or error.
+// An error is returned in the case that the error passed is not a field not
+// found error, or is a field not found error and the patch strategy is
+// Required. In the case that an error is not returned, the boolean value
+// indicates whether the patch is a no-op.
+func FieldNotFoundNoop(err error, s *PatchPolicy) (bool, error) {
+	switch {
+	case err == nil:
+		return false, nil
+	case !fieldpath.IsNotFound(err):
+		return false, err
+	case s == nil:
+		return true, nil
+	case s.FromFieldPath == nil:
+		return true, nil
+	case *s.FromFieldPath == FromFieldPathPolicyRequired:
+		return false, err
+	default:
+		// NOTE(hasheddan): this is the case in which Optional patch policy is
+		// specified explicitly and field is not found.
+		return true, nil
+	}
+}
+
 // TransformType is type of the transform function to be chosen.
 type TransformType string
 
@@ -328,6 +404,7 @@ const (
 type Transform struct {
 
 	// Type of the transform to be run.
+	// +kubebuilder:validation:Enum=map;math;string;convert
 	Type TransformType `json:"type"`
 
 	// Math is used to transform the input via mathematical operations such as
@@ -456,6 +533,7 @@ const (
 	ConvertTransformTypeString  = "string"
 	ConvertTransformTypeBool    = "bool"
 	ConvertTransformTypeInt     = "int"
+	ConvertTransformTypeInt64   = "int64"
 	ConvertTransformTypeFloat64 = "float64"
 )
 
@@ -465,8 +543,8 @@ type conversionPair struct {
 }
 
 var conversions = map[conversionPair]func(interface{}) (interface{}, error){
-	{From: ConvertTransformTypeString, To: ConvertTransformTypeInt}: func(i interface{}) (interface{}, error) {
-		return strconv.Atoi(i.(string))
+	{From: ConvertTransformTypeString, To: ConvertTransformTypeInt64}: func(i interface{}) (interface{}, error) {
+		return strconv.ParseInt(i.(string), 10, 64)
 	},
 	{From: ConvertTransformTypeString, To: ConvertTransformTypeBool}: func(i interface{}) (interface{}, error) {
 		return strconv.ParseBool(i.(string))
@@ -475,24 +553,24 @@ var conversions = map[conversionPair]func(interface{}) (interface{}, error){
 		return strconv.ParseFloat(i.(string), 64)
 	},
 
-	{From: ConvertTransformTypeInt, To: ConvertTransformTypeString}: func(i interface{}) (interface{}, error) { // nolint:unparam
-		return strconv.Itoa(i.(int)), nil
+	{From: ConvertTransformTypeInt64, To: ConvertTransformTypeString}: func(i interface{}) (interface{}, error) { // nolint:unparam
+		return strconv.FormatInt(i.(int64), 10), nil
 	},
-	{From: ConvertTransformTypeInt, To: ConvertTransformTypeBool}: func(i interface{}) (interface{}, error) { // nolint:unparam
-		return i.(int) == 1, nil
+	{From: ConvertTransformTypeInt64, To: ConvertTransformTypeBool}: func(i interface{}) (interface{}, error) { // nolint:unparam
+		return i.(int64) == 1, nil
 	},
-	{From: ConvertTransformTypeInt, To: ConvertTransformTypeFloat64}: func(i interface{}) (interface{}, error) { // nolint:unparam
-		return float64(i.(int)), nil
+	{From: ConvertTransformTypeInt64, To: ConvertTransformTypeFloat64}: func(i interface{}) (interface{}, error) { // nolint:unparam
+		return float64(i.(int64)), nil
 	},
 
 	{From: ConvertTransformTypeBool, To: ConvertTransformTypeString}: func(i interface{}) (interface{}, error) { // nolint:unparam
 		return strconv.FormatBool(i.(bool)), nil
 	},
-	{From: ConvertTransformTypeBool, To: ConvertTransformTypeInt}: func(i interface{}) (interface{}, error) { // nolint:unparam
+	{From: ConvertTransformTypeBool, To: ConvertTransformTypeInt64}: func(i interface{}) (interface{}, error) { // nolint:unparam
 		if i.(bool) {
-			return 1, nil
+			return int64(1), nil
 		}
-		return 0, nil
+		return int64(0), nil
 	},
 	{From: ConvertTransformTypeBool, To: ConvertTransformTypeFloat64}: func(i interface{}) (interface{}, error) { // nolint:unparam
 		if i.(bool) {
@@ -504,8 +582,8 @@ var conversions = map[conversionPair]func(interface{}) (interface{}, error){
 	{From: ConvertTransformTypeFloat64, To: ConvertTransformTypeString}: func(i interface{}) (interface{}, error) { // nolint:unparam
 		return strconv.FormatFloat(i.(float64), 'f', -1, 64), nil
 	},
-	{From: ConvertTransformTypeFloat64, To: ConvertTransformTypeInt}: func(i interface{}) (interface{}, error) { // nolint:unparam
-		return int(i.(float64)), nil
+	{From: ConvertTransformTypeFloat64, To: ConvertTransformTypeInt64}: func(i interface{}) (interface{}, error) { // nolint:unparam
+		return int64(i.(float64)), nil
 	},
 	{From: ConvertTransformTypeFloat64, To: ConvertTransformTypeBool}: func(i interface{}) (interface{}, error) { // nolint:unparam
 		return i.(float64) == float64(1), nil
@@ -515,21 +593,29 @@ var conversions = map[conversionPair]func(interface{}) (interface{}, error){
 // A ConvertTransform converts the input into a new object whose type is supplied.
 type ConvertTransform struct {
 	// ToType is the type of the output of this transform.
-	// +kubebuilder:validation:Enum=string;int;bool;float64
+	// +kubebuilder:validation:Enum=string;int;int64;bool;float64
 	ToType string `json:"toType"`
 }
 
 // Resolve runs the String transform.
 func (s *ConvertTransform) Resolve(input interface{}) (interface{}, error) {
-	switch reflect.TypeOf(input).Kind().String() {
-	case s.ToType:
+	from := reflect.TypeOf(input).Kind().String()
+	if from == ConvertTransformTypeInt {
+		from = ConvertTransformTypeInt64
+	}
+	to := s.ToType
+	if to == ConvertTransformTypeInt {
+		to = ConvertTransformTypeInt64
+	}
+	switch from {
+	case to:
 		return input, nil
-	case ConvertTransformTypeString, ConvertTransformTypeBool, ConvertTransformTypeInt, ConvertTransformTypeFloat64:
+	case ConvertTransformTypeString, ConvertTransformTypeBool, ConvertTransformTypeInt64, ConvertTransformTypeFloat64:
 		break
 	default:
 		return nil, errors.Errorf(errFmtConvertInputTypeNotSupported, reflect.TypeOf(input).Kind().String())
 	}
-	f, ok := conversions[conversionPair{From: reflect.TypeOf(input).Kind().String(), To: s.ToType}]
+	f, ok := conversions[conversionPair{From: from, To: to}]
 	if !ok {
 		return nil, errors.Errorf(errFmtConversionPairNotSupported, reflect.TypeOf(input).Kind().String(), s.ToType)
 	}

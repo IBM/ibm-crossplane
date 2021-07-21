@@ -50,6 +50,8 @@ GO_TEST_PARALLEL := $(shell echo $$(( $(NPROCS) / 2 )))
 GO_STATIC_PACKAGES = $(GO_PROJECT)/cmd/crossplane $(GO_PROJECT)/cmd/crank
 GO_LDFLAGS += -X $(GO_PROJECT)/internal/version.version=$(VERSION)
 GO_SUBDIRS += cmd internal apis
+# disables credential providers for pulling package images
+GO_TAGS += disable_gcp disable_aws disable_azure
 GO111MODULE = on
 -include build/makelib/golang.mk
 
@@ -75,6 +77,7 @@ HELM_CHART_LINT_ARGS_crossplane = --set nameOverride='',imagePullSecrets=''
 
 DOCKER_REGISTRY = crossplane
 IMAGES = crossplane
+OSBASEIMAGE = gcr.io/distroless/static:nonroot
 -include build/makelib/image.mk
 
 # ====================================================================================
@@ -102,11 +105,17 @@ fallthrough: submodules
 manifests:
 	@$(WARN) Deprecated. Please run make generate instead.
 
-generate: $(HELM) $(KUSTOMIZE) go.vendor go.generate gen-kustomize-crds
+generate: $(HELM) $(KUSTOMIZE) go.vendor go.generate gen-kustomize-crds gen-install-doc
 	@$(OK) Finished vendoring and generating
 
 
 CRD_DIR = cluster/charts/crossplane/crds
+
+gen-install-doc:
+	@$(INFO) Generating install documentation from Helm chart
+	@head -7 docs/reference/install.md | cat - cluster/charts/crossplane/README.md > reference-install.tmp
+	@mv reference-install.tmp docs/reference/install.md
+	@$(OK) Successfully generated install documentation
 
 gen-kustomize-crds:
 	@$(INFO) Adding all CRDs to Kustomize file for local development
@@ -167,7 +176,7 @@ run: go.build
 	@# To see other arguments that can be provided, run the command with --help instead
 	$(GO_OUT_DIR)/$(PROJECT_NAME) --debug
 
-.PHONY: manifests cobertura reviewable submodules fallthrough test-integration run install-crds uninstall-crds gen-kustomize-crds
+.PHONY: manifests cobertura reviewable submodules fallthrough test-integration run install-crds uninstall-crds gen-kustomize-crds gen-install-doc
 
 # ====================================================================================
 # Special Targets
