@@ -498,6 +498,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
+	}
+
+	conn := managed.ConnectionDetails{}
+	ready := 0
+	for i, tpl := range comp.Spec.Resources {
+		cd := cds[i]
+
+		if err := r.composite.Render(ctx, cr, cd, tpl); err != nil {
+			log.Debug(errRenderCR, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
 
 		c, err := r.composed.FetchConnectionDetails(ctx, cd, tpl)
 		if err != nil {

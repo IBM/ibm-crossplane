@@ -9,7 +9,8 @@ weight: 300
 The reference documentation includes answers to frequently asked questions,
 information about similar projects, and links to resources that can help you
 learn more about Crossplane and Kubernetes. If you have additional information
-that you think would be valuable for the community, please feel free to [open a pull request] and add it.
+that you think would be valuable for the community, please feel free to [open a
+pull request] and add it.
 
 1. [Install]
 1. [Configure]
