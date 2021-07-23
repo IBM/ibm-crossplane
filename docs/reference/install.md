@@ -112,6 +112,7 @@ and their default values.
 | `rbacManager.tolerations` | Enable tolerations for RBAC Managers pod | `{}` |
 | `alpha.oam.enabled` | Deploy the `crossplane/oam-kubernetes-runtime` Helm chart | `false` |
 | `metrics.enabled` | Expose Crossplane and RBAC Manager metrics endpoint | `false` |
+| `provider.packages` | The list of Provider packages to install together with Crossplane | `[]` |
 
 ### Command Line
 
