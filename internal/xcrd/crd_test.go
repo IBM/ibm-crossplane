@@ -300,6 +300,7 @@ func TestForCompositeResource(t *testing.T) {
 											"lastPublishedTime": {Type: "string", Format: "date-time"},
 										},
 									},
+									// IBM Patch: Move resourceRef to status
 									"resourceRef": {
 										Type:     "object",
 										Required: []string{"apiVersion", "kind", "name"},
@@ -652,6 +653,7 @@ func TestForCompositeResourceClaim(t *testing.T) {
 												"lastPublishedTime": {Type: "string", Format: "date-time"},
 											},
 										},
+										// IBM Patch: Move resourceRef to status
 										"resourceRef": {
 											Type:     "object",
 											Required: []string{"apiVersion", "kind", "name"},
