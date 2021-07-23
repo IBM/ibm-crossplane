@@ -7,10 +7,17 @@ image:
   tag: %%VERSION%%
   pullPolicy: Always
 
+nodeSelector: {}
+tolerations: {}
+affinity: {}
+
 leaderElection: true
 args: {}
 
 provider:
+  packages: []
+
+configuration:
   packages: []
 
 imagePullSecrets:
@@ -22,6 +29,9 @@ rbacManager:
   managementPolicy: All
   leaderElection: true
   args: {}
+  nodeSelector: {}
+  tolerations: {}
+  affinity: {}
 
 priorityClassName: ""
 

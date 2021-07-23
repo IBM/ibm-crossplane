@@ -96,11 +96,17 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 		s.Annotations = cc.Annotations
 		d.Labels = cc.Labels
 		d.Annotations = cc.Annotations
+		if cc.Spec.Metadata != nil {
+			d.Spec.Template.Annotations = cc.Spec.Metadata.Annotations
+		}
 		if cc.Spec.Replicas != nil {
 			d.Spec.Replicas = cc.Spec.Replicas
 		}
 		if cc.Spec.Image != nil {
 			d.Spec.Template.Spec.Containers[0].Image = *cc.Spec.Image
+		}
+		if len(cc.Spec.Ports) > 0 {
+			d.Spec.Template.Spec.Containers[0].Ports = cc.Spec.Ports
 		}
 		if cc.Spec.NodeSelector != nil {
 			d.Spec.Template.Spec.NodeSelector = cc.Spec.NodeSelector

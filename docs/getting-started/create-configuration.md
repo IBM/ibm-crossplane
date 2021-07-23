@@ -1,35 +1,24 @@
 ---
-title: Package Infrastructure
+title: Create a Configuration
 toc: true
-weight: 6
+weight: 4
 indent: true
 ---
 
-# Package Infrastructure
+# Create a Configuration
 
-In a [previous section] we learned that Crossplane can be configured with new
-composite resources (XRs) that are [composed] of other resources, allowing you
-to define and offer resources that group and abstract infrastructure primitives.
-We use two special Crossplane resources to define and configure new XRs and
-XRCs:
-
-- A `CompositeResourceDefinition` (XRD) _defines_ a new kind of composite
-  resource, including its schema. An XRD may optionally _offer_ a claim.
-- A `Composition` specifies which resources a composite resource will be
-  composed of, and how they should be configured. You can create multiple
-  `Composition` options for each composite resource.
-
-XRDs and Compositions may be [packaged] as a _configuration_, that may easily be
-installed to Crossplane by creating a declarative `Configuration` resource, or
-by using `kubectl crossplane install configuration`. In the examples below we
-will build and push a configuration that defines a new
-`CompositePostgreSQLInstance` XR that takes a single `storageGB` parameter, and
-creates a connection `Secret` with keys for `username`, `password`, and
-`endpoint`.
+In the [previous section] we were able to create a PostgreSQL database because
+we had installed a configuration package that defined the `PostgreSQLInstance`
+type and a `Composition` of managed resources that mapped to it. Crossplane
+allows you to define your own composite resources (XRs) and compositions, then
+package them up to be easily distributed as OCI images. This allows you to
+construct a reproducible platform that exposes infrastructure APIs at your
+desired level of abstraction, and can be installed into any Crossplane cluster.
 
 ## Create a Configuration Directory
 
-Our configuration will consist of three files:
+We are going to build the same configuration package that we previously
+installed. It will consist of three files:
 
 * `crossplane.yaml` - Metadata about the configuration.
 * `definition.yaml` - The XRD.
@@ -52,6 +41,10 @@ cd crossplane-config
 
 We'll create the aforementioned three files in this directory, then build them
 into a package.
+
+> Note that `definition.yaml` and `composition.yaml` could be created directly
+> in the Crossplane cluster without packaging them into a configuration. This
+> can be useful for testing compositions before pushing them to a registry.
 
 ## Create CompositeResourceDefinition
 
@@ -99,7 +92,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/definition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/definition.yaml
 ```
 
 > You might notice that the XRD we created specifies both "names" and "claim
@@ -119,7 +112,6 @@ instance on the chosen provider.
 <li><a href="#aws-new-tab-2" data-toggle="tab">AWS (New VPC)</a></li>
 <li><a href="#gcp-tab-2" data-toggle="tab">GCP</a></li>
 <li><a href="#azure-tab-2" data-toggle="tab">Azure</a></li>
-<li><a href="#alibaba-tab-2" data-toggle="tab">Alibaba</a></li>
 </ul>
 <br>
 <div class="tab-content">
@@ -145,7 +137,8 @@ spec:
     apiVersion: database.example.org/v1alpha1
     kind: CompositePostgreSQLInstance
   resources:
-    - base:
+    - name: rdsinstance
+      base:
         apiVersion: database.aws.crossplane.io/v1beta1
         kind: RDSInstance
         spec:
@@ -176,7 +169,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/aws/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws/composition.yaml
 ```
 
 </div>
@@ -202,7 +195,8 @@ spec:
     apiVersion: database.example.org/v1alpha1
     kind: CompositePostgreSQLInstance
   resources:
-    - base:
+    - name: vpc
+      base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
         kind: VPC
         spec:
@@ -211,7 +205,8 @@ spec:
             cidrBlock: 192.168.0.0/16
             enableDnsSupport: true
             enableDnsHostNames: true
-    - base:
+    - name: subnet-a
+      base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
         kind: Subnet
         metadata:
@@ -224,7 +219,8 @@ spec:
             vpcIdSelector:
               matchControllerRef: true
             availabilityZone: us-east-1a
-    - base:
+    - name: subnet-b
+      base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
         kind: Subnet
         metadata:
@@ -237,7 +233,8 @@ spec:
             vpcIdSelector:
               matchControllerRef: true
             availabilityZone: us-east-1b
-    - base:
+    - name: subnet-c
+      base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
         kind: Subnet
         metadata:
@@ -250,7 +247,8 @@ spec:
             vpcIdSelector:
               matchControllerRef: true
             availabilityZone: us-east-1c
-    - base:
+    - name: subnet-c
+      base:
         apiVersion: database.aws.crossplane.io/v1beta1
         kind: DBSubnetGroup
         spec:
@@ -259,7 +257,8 @@ spec:
             description: An excellent formation of subnetworks.
             subnetIdSelector:
               matchControllerRef: true
-    - base:
+    - name: internetgateway
+      base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
         kind: InternetGateway
         spec:
@@ -267,7 +266,8 @@ spec:
             region: us-east-1
             vpcIdSelector:
               matchControllerRef: true
-    - base:
+    - name: routetable
+      base:
         apiVersion: ec2.aws.crossplane.io/v1alpha4
         kind: RouteTable
         spec:
@@ -289,7 +289,8 @@ spec:
               - subnetIdSelector:
                   matchLabels:
                     zone: us-east-1c
-    - base:
+    - name: securitygroup
+      base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
         kind: SecurityGroup
         spec:
@@ -306,7 +307,8 @@ spec:
                 ipRanges:
                   - cidrIp: 0.0.0.0/0
                     description: Everywhere
-    - base:
+    - name: rdsinstance
+      base:
         apiVersion: database.aws.crossplane.io/v1beta1
         kind: RDSInstance
         spec:
@@ -341,7 +343,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/aws-with-vpc/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws-with-vpc/composition.yaml
 ```
 
 </div>
@@ -361,7 +363,8 @@ spec:
     apiVersion: database.example.org/v1alpha1
     kind: CompositePostgreSQLInstance
   resources:
-    - base:
+    - name: cloudsqlinstance
+      base:
         apiVersion: database.gcp.crossplane.io/v1beta1
         kind: CloudSQLInstance
         spec:
@@ -390,12 +393,13 @@ spec:
         - fromConnectionSecretKey: username
         - fromConnectionSecretKey: password
         - fromConnectionSecretKey: endpoint
-        - name: port
+        - type: FromValue
+          name: port
           value: "5432"
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/gcp/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/gcp/composition.yaml
 ```
 
 </div>
@@ -421,12 +425,14 @@ spec:
     apiVersion: database.example.org/v1alpha1
     kind: CompositePostgreSQLInstance
   resources:
-    - base:
+    - name: resourcegroup
+      base:
         apiVersion: azure.crossplane.io/v1alpha3
         kind: ResourceGroup
         spec:
           location: West US 2
-    - base:
+    - name: postgresqlserver
+      base:
         apiVersion: database.azure.crossplane.io/v1beta1
         kind: PostgreSQLServer
         spec:
@@ -460,9 +466,11 @@ spec:
         - fromConnectionSecretKey: username
         - fromConnectionSecretKey: password
         - fromConnectionSecretKey: endpoint
-        - name: port
+        - type: FromValue
+          name: port
           value: "5432"
-    - base:
+    - name: firewallrule
+      base:
         apiVersion: database.azure.crossplane.io/v1alpha3
         kind: PostgreSQLServerFirewallRule
         spec:
@@ -477,7 +485,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/azure/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/azure/composition.yaml
 ```
 
 </div>
@@ -497,7 +505,8 @@ spec:
     apiVersion: database.example.org/v1alpha1
     kind: CompositePostgreSQLInstance
   resources:
-    - base:
+    - name: rdsinstance
+      base:
         apiVersion: database.alibaba.crossplane.io/v1alpha1
         kind: RDSInstance
         spec:
@@ -526,7 +535,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/alibaba/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/alibaba/composition.yaml
 ```
 
 </div>
@@ -546,7 +555,6 @@ so that Crossplane users may install it.
 <li><a href="#aws-new-tab-3" data-toggle="tab">AWS (New VPC)</a></li>
 <li><a href="#gcp-tab-3" data-toggle="tab">GCP</a></li>
 <li><a href="#azure-tab-3" data-toggle="tab">Azure</a></li>
-<li><a href="#alibaba-tab-3" data-toggle="tab">Alibaba</a></li>
 </ul>
 <br>
 <div class="tab-content">
@@ -561,16 +569,29 @@ metadata:
     guide: quickstart
     provider: aws
     vpc: default
+spec:
+  crossplane:
+    version: ">=v1.0.0-0"
+  dependsOn:
+    - provider: crossplane/provider-aws
+      version: ">=v0.14.0"
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/aws/crossplane.yaml
-
-# Set this to the Docker Hub username or OCI registry you wish to use.
-REG=my-package-repo
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws/crossplane.yaml
 
 kubectl crossplane build configuration
-kubectl crossplane push configuration ${REG}/getting-started-with-aws:master
+```
+
+You should see a file in your working directory with a `.xpkg` extension. The
+Crossplane CLI will automatically tag and push it to the registry of your
+choosing in the next step if it is the only `.xpkg` in the directory. Otherwise
+you may specify a specific package by using the `-f` flag.
+
+```console
+# Set this to the Docker Hub username or OCI registry you wish to use.
+REG=my-package-repo
+kubectl crossplane push configuration ${REG}/getting-started-with-aws:v1.1.0
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -588,16 +609,29 @@ metadata:
     guide: quickstart
     provider: aws
     vpc: new
+spec:
+  crossplane:
+    version: ">=v1.0.0-0"
+  dependsOn:
+    - provider: crossplane/provider-aws
+      version: ">=v0.14.0"
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/aws-with-vpc/crossplane.yaml
-
-# Set this to the Docker Hub username or OCI registry you wish to use.
-REG=my-package-repo
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws-with-vpc/crossplane.yaml
 
 kubectl crossplane build configuration
-kubectl crossplane push configuration ${REG}/getting-started-with-aws-with-vpc:master
+```
+
+You should see a file in your working directory with a `.xpkg` extension. The
+Crossplane CLI will automatically tag and push it to the registry of your
+choosing in the next step if it is the only `.xpkg` in the directory. Otherwise
+you may specify a specific package by using the `-f` flag.
+
+```console
+# Set this to the Docker Hub username or OCI registry you wish to use.
+REG=my-package-repo
+kubectl crossplane push configuration ${REG}/getting-started-with-aws-with-vpc:v1.1.0
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -614,16 +648,29 @@ metadata:
   annotations:
     guide: quickstart
     provider: gcp
+spec:
+  crossplane:
+    version: ">=v1.0.0-0"
+  dependsOn:
+    - provider: crossplane/provider-gcp
+      version: ">=v0.13.0"
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/gcp/crossplane.yaml
-
-# Set this to the Docker Hub username or OCI registry you wish to use.
-REG=my-package-repo
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/gcp/crossplane.yaml
 
 kubectl crossplane build configuration
-kubectl crossplane push configuration ${REG}/getting-started-with-gcp:master
+```
+
+You should see a file in your working directory with a `.xpkg` extension. The
+Crossplane CLI will automatically tag and push it to the registry of your
+choosing in the next step if it is the only `.xpkg` in the directory. Otherwise
+you may specify a specific package by using the `-f` flag.
+
+```console
+# Set this to the Docker Hub username or OCI registry you wish to use.
+REG=my-package-repo
+kubectl crossplane push configuration ${REG}/getting-started-with-gcp:v1.1.0
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -640,42 +687,29 @@ metadata:
   annotations:
     guide: quickstart
     provider: azure
+spec:
+  crossplane:
+    version: ">=v1.0.0-0"
+  dependsOn:
+    - provider: crossplane/provider-azure
+      version: ">=v0.13.0"
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/azure/crossplane.yaml
-
-# Set this to the Docker Hub username or OCI registry you wish to use.
-REG=my-package-repo
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/azure/crossplane.yaml
 
 kubectl crossplane build configuration
-kubectl crossplane push configuration ${REG}/getting-started-with-azure:master
 ```
 
-> Note that the Crossplane CLI will not follow symbolic links for files in the
-> root package directory.
-
-</div>
-<div class="tab-pane fade" id="alibaba-tab-3" markdown="1">
-
-```yaml
-apiVersion: meta.pkg.crossplane.io/v1
-kind: Configuration
-metadata:
-  name: getting-started-with-alibaba
-  annotations:
-    guide: quickstart
-    provider: alibaba
-```
+You should see a file in your working directory with a `.xpkg` extension. The
+Crossplane CLI will automatically tag and push it to the registry of your
+choosing in the next step if it is the only `.xpkg` in the directory. Otherwise
+you may specify a specific package by using the `-f` flag.
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/docs/snippets/package/alibaba/crossplane.yaml
-
 # Set this to the Docker Hub username or OCI registry you wish to use.
 REG=my-package-repo
-
-kubectl crossplane build configuration
-kubectl crossplane push configuration ${REG}/getting-started-with-alibaba:master
+kubectl crossplane push configuration ${REG}/getting-started-with-azure:v1.1.0
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -686,7 +720,7 @@ kubectl crossplane push configuration ${REG}/getting-started-with-alibaba:master
 
 That's it! You've now built and pushed your package. Take a look at the
 Crossplane [packages] documentation for more information about installing and
-working with packages.
+working with packages, or read about other Crossplane [concepts].
 
 ## Clean Up
 
@@ -699,9 +733,9 @@ rm -rf crossplane-config
 
 <!-- Named Links -->
 
-[previous section]: compose-infrastructure.md
-[composed]: ../introduction/composition.md
-[composition]: ../introduction/composition.md
+[previous section]: provision-infrastructure.md
+[composed]: ../concepts/composition.md
+[composition]: ../concepts/composition.md
 [Docker Hub]: https://hub.docker.com/
-[packages]: ../introduction/packages.md
-[packaged]: ../introduction/packages.md
+[packages]: ../concepts/packages.md
+[concepts]: ../concepts/overview.md

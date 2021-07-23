@@ -40,6 +40,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -71,9 +72,13 @@ const (
 	errGetComp      = "cannot get Composition"
 	errConfigure    = "cannot configure composite resource"
 	errPublish      = "cannot publish connection details"
-	errRender       = "cannot render composed resource"
+	errRenderCD     = "cannot render composed resource"
+	errRenderCR     = "cannot render composite resource"
+	errValidate     = "refusing to use invalid Composition"
+	errInline       = "cannot inline Composition patch sets"
+	errAssociate    = "cannot associate composed resources with Composition resource templates"
 
-	errFmtRender = "cannot render composed resource at index %d"
+	errFmtRender = "cannot render composed resource from resource template at index %d"
 )
 
 // Event reasons.
@@ -206,6 +211,22 @@ func WithClientApplicator(ca resource.ClientApplicator) ReconcilerOption {
 	}
 }
 
+// WithCompositionValidator specifies how the Reconciler should validate
+// Compositions.
+func WithCompositionValidator(v CompositionValidator) ReconcilerOption {
+	return func(r *Reconciler) {
+		r.composition.CompositionValidator = v
+	}
+}
+
+// WithCompositionTemplateAssociator specifies how the Reconciler should
+// associate composition templates with composed resources.
+func WithCompositionTemplateAssociator(a CompositionTemplateAssociator) ReconcilerOption {
+	return func(r *Reconciler) {
+		r.composition.CompositionTemplateAssociator = a
+	}
+}
+
 // WithRenderer specifies how the Reconciler should render composed resources.
 func WithRenderer(rd Renderer) ReconcilerOption {
 	return func(r *Reconciler) {
@@ -253,10 +274,23 @@ func WithConnectionPublisher(p ConnectionPublisher) ReconcilerOption {
 	}
 }
 
+// WithCompositeRenderer specifies how the Reconciler should render composite resources.
+func WithCompositeRenderer(rd Renderer) ReconcilerOption {
+	return func(r *Reconciler) {
+		r.composite.Renderer = rd
+	}
+}
+
+type composition struct {
+	CompositionValidator
+	CompositionTemplateAssociator
+}
+
 type compositeResource struct {
 	CompositionSelector
 	Configurator
 	ConnectionPublisher
+	Renderer
 }
 
 type composedResource struct {
@@ -279,10 +313,19 @@ func NewReconciler(mgr manager.Manager, of resource.CompositeKind, opts ...Recon
 		},
 		newComposite: nc,
 
+		composition: composition{
+			CompositionValidator: ValidationChain{
+				CompositionValidatorFn(RejectMixedTemplates),
+				CompositionValidatorFn(RejectDuplicateNames),
+			},
+			CompositionTemplateAssociator: NewGarbageCollectingAssociator(kube),
+		},
+
 		composite: compositeResource{
 			CompositionSelector: NewAPILabelSelectorResolver(kube),
 			Configurator:        NewConfiguratorChain(NewAPINamingConfigurator(kube), NewAPIConfigurator(kube)),
 			ConnectionPublisher: NewAPIFilteredSecretPublisher(kube, []string{}),
+			Renderer:            RendererFn(RenderComposite),
 		},
 
 		composed: composedResource{
@@ -306,15 +349,16 @@ type Reconciler struct {
 	client       resource.ClientApplicator
 	newComposite func() resource.Composite
 
-	composite compositeResource
-	composed  composedResource
+	composition composition
+	composite   compositeResource
+	composed    composedResource
 
 	log    logging.Logger
 	record event.Recorder
 }
 
 // Reconcile a composite resource.
-func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) { //nolint:gocyclo
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) { //nolint:gocyclo
 	// NOTE(negz): Like most Reconcile methods, this one is over our cyclomatic
 	// complexity goal. Be wary when adding branches, and look for functionality
 	// that could be reasonably moved into an injected dependency.
@@ -322,7 +366,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	log := r.log.WithValues("request", req)
 	log.Debug("Reconciling")
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	cr := r.newComposite()
@@ -365,32 +409,37 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		"composition-name", comp.GetName(),
 	)
 
-	// TODO(muvaf): Since the composed reconciler returns only reference, it can
-	// be parallelized via go routines.
-
-	// In order to iterate over all composition targets, we create an empty ref
-	// array with the same length. Then copy the already provisioned ones into
-	// that array to not create new ones because composed reconciler assumes that
-	// if the reference is empty, it needs to create the resource.
-
-	// TODO(negz): This approach means that the resources of a Composition are
-	// effectively append only. We may want to reconsider this per
-	// https://github.com/crossplane/crossplane/issues/1909
-	refs := make([]corev1.ObjectReference, len(comp.Spec.Resources))
-	copy(refs, cr.GetResourceReferences())
-
-	// Inline PatchSets from Composition Spec before rendering
-	if err := comp.Spec.InlinePatchSets(); err != nil {
-		log.Debug(errRender, "error", err)
+	// TODO(negz): Composition validation should be handled by a validation
+	// webhook, not by this controller.
+	if err := r.composition.Validate(comp); err != nil {
+		log.Debug(errValidate, "error", err)
 		r.record.Event(cr, event.Warning(reasonCompose, err))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	cds := make([]*composed.Unstructured, len(refs))
-	for i := range refs {
-		cd := composed.New(composed.FromReference(refs[i]))
-		if err := r.composed.Render(ctx, cr, cd, comp.Spec.Resources[i]); err != nil {
-			log.Debug(errRender, "error", err, "index", i)
+	// Inline PatchSets from Composition Spec before composing resources.
+	if err := comp.Spec.InlinePatchSets(); err != nil {
+		log.Debug(errInline, "error", err)
+		r.record.Event(cr, event.Warning(reasonCompose, err))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
+
+	tas, err := r.composition.AssociateTemplates(ctx, cr, comp)
+	if err != nil {
+		log.Debug(errAssociate, "error", err)
+		r.record.Event(cr, event.Warning(reasonCompose, err))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
+
+	// We want to ensure we can render all of our composed resources before we
+	// apply any of them. We prefer to avoid creating or updating any composed
+	// resources if we know we won't be able to create or update all of them.
+	refs := make([]corev1.ObjectReference, len(tas))
+	cds := make([]resource.Composed, len(tas))
+	for i, ta := range tas {
+		cd := composed.New(composed.FromReference(ta.Reference))
+		if err := r.composed.Render(ctx, cr, cd, ta.Template); err != nil {
+			log.Debug(errRenderCD, "error", err, "index", i)
 			r.record.Event(cr, event.Warning(reasonCompose, errors.Wrapf(err, errFmtRender, i)))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
@@ -399,6 +448,10 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		refs[i] = *meta.ReferenceTo(cd, cd.GetObjectKind().GroupVersionKind())
 
 		// IBM Patch: This block has been moved in to the loop
+		// We persist references to our composed resources before we create them.
+		// This way we can render composed resources with non-deterministic names,
+		// and also potentially recover from any errors we encounter while applying
+		// composed resources without leaking them.
 		cr.SetResourceReferences(refs)
 		if err := r.client.Update(ctx, cr); err != nil {
 			log.Debug(errUpdate, "error", err)
@@ -407,7 +460,11 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		}
 
 		// IBM Patch: Apply the managed resource
-		if err := r.client.Apply(ctx, cd); err != nil {
+		// We apply all of our composed resources before we observe them and update
+		// the composite resource accordingly in the loop below. This ensures that
+		// issues observing and processing one composed resource won't block the
+		// application of another.
+		if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
@@ -430,11 +487,16 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 
 	conn := managed.ConnectionDetails{}
 	ready := 0
-	for i, cd := range cds {
-		// Connection details are fetched in all cases in a best-effort mode,
-		// i.e. it doesn't return error if the secret does not exist or the
-		// resource does not publish a secret at all.
-		c, err := r.composed.FetchConnectionDetails(ctx, cd, comp.Spec.Resources[i])
+	for i, tpl := range comp.Spec.Resources {
+		cd := cds[i]
+
+		if err := r.composite.Render(ctx, cr, cd, tpl); err != nil {
+			log.Debug(errRenderCR, "error", err)
+			r.record.Event(cr, event.Warning(reasonCompose, err))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+
+		c, err := r.composed.FetchConnectionDetails(ctx, cd, tpl)
 		if err != nil {
 			log.Debug(errFetchSecret, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
@@ -445,7 +507,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 			conn[key] = val
 		}
 
-		rdy, err := r.composed.IsReady(ctx, cd, comp.Spec.Resources[i])
+		rdy, err := r.composed.IsReady(ctx, cd, tpl)
 		if err != nil {
 			log.Debug(errReadiness, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
@@ -455,6 +517,26 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		if rdy {
 			ready++
 		}
+	}
+
+	// We pass a deepcopy because the update method doesn't update status,
+	// but calling update resets any pending status changes.
+	updated := cr.DeepCopyObject().(client.Object)
+	if err := r.client.Update(ctx, updated); err != nil {
+		log.Debug(errUpdate, "error", err)
+		r.record.Event(cr, event.Warning(reasonCompose, err))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
+
+	if updated.GetResourceVersion() != cr.GetResourceVersion() {
+		// If our deepcopy's resource version changed we know that our update
+		// was not a no-op. Our original object has a stale resource
+		// version, so any attempt to update it will fail. The safest thing for
+		// us to do here is to return early. The update will have immediately enqueued a
+		// new reconcile because this controller is watching for this kind of resource.
+		// The remaining reconcile logic will proceed when no new spec changes are persisted.
+		log.Debug("Composite resource spec or metadata was patched - terminating reconcile early")
+		return reconcile.Result{}, nil
 	}
 
 	r.record.Event(cr, event.Normal(reasonCompose, "Successfully composed resources"))
