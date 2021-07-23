@@ -10,9 +10,9 @@ on:
 
 env:
   # Common versions
-  GO_VERSION: "1.14"
-  GOLANGCI_VERSION: "v1.31"
-  DOCKER_BUILDX_VERSION: "v0.4.2"
+  GO_VERSION: '1.14'
+  GOLANGCI_VERSION: 'v1.31'
+  DOCKER_BUILDX_VERSION: 'v0.4.2'
 
 jobs:
   detect-noop:
@@ -207,6 +207,7 @@ jobs:
           key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-pkg-
+
       - name: Vendor Dependencies
         run: make vendor vendor.check
 
