@@ -38,6 +38,10 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
+	configv1 "github.com/crossplane/crossplane/apis/pkg/v1"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
@@ -179,7 +183,7 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 	}
 
 	// IBM Patch: update with pre-defined default label
-	updateWithDefaultLabel(labels)
+	updateWithDefaultLabel(ctx, labels, r)
 
 	list := &v1.CompositionList{}
 	if err := r.client.List(ctx, list, client.MatchingLabels(labels)); err != nil {
@@ -207,26 +211,20 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 	return errors.Wrap(r.client.Update(ctx, cp), errUpdateComposite)
 }
 
-// IBM Patch: Update the labels map with pre-defined default label
-func updateWithDefaultLabel(labels map[string]string) {
-	// default label name
-	l := os.Getenv("DEFAULT_LABEL_NAME")
+// IBM Patch: update with default label from Configuration
+func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *APILabelSelectorResolver) {
 
-	// default label value
-	v := os.Getenv("DEFAULT_LABEL_VALUE")
+	configurationName := "ibm-crossplane-bedrock-shim-config"
+	d := &configv1.Configuration{}
+	nn := types.NamespacedName{Name: configurationName}
 
-	if len(l) == 0 || len(v) == 0 {
-		// default label not provided, do nothing
+	if err := r.client.Get(ctx, nn, d); err != nil {
 		return
 	}
 
-	if _, ok := labels[l]; ok {
-		// default label is already specified, do nothing
-		return
+	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
+		labels["provider"] = provider
 	}
-
-	// add default label to the map
-	labels[l] = v
 }
 
 // NewAPIDefaultCompositionSelector returns a APIDefaultCompositionSelector.
