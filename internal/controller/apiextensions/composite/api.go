@@ -34,11 +34,13 @@ package composite
 
 import (
 	"context"
-	configv1 "github.com/crossplane/crossplane/apis/pkg/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"math/rand"
 	"os"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	configv1 "github.com/crossplane/crossplane/apis/pkg/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -189,8 +191,8 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 		return errors.New("Error in retrieving configuration")
 	}
 
-	if provider := d.Labels["ibm-crossplane-provider"]; provider != ""{
-		labels["provider"]=provider
+	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
+		labels["provider"] = provider
 	}
 
 	list := &v1.CompositionList{}
