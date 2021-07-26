@@ -182,18 +182,8 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 		labels = sel.MatchLabels
 	}
 
-	// IBM Patch: update with default label from Configuration
-	configurationName := "ibm-crossplane-bedrock-shim-config"
-	d := &configv1.Configuration{}
-	nn := types.NamespacedName{Name: configurationName}
-
-	if err := r.client.Get(ctx, nn, d); err != nil {
-		return errors.New("Error in retrieving configuration")
-	}
-
-	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
-		labels["provider"] = provider
-	}
+	// IBM Patch: update with pre-defined default label
+	updateWithDefaultLabel(ctx, labels, r)
 
 	list := &v1.CompositionList{}
 	if err := r.client.List(ctx, list, client.MatchingLabels(labels)); err != nil {
@@ -219,6 +209,22 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 	selected := candidates[random.Intn(len(candidates))]
 	cp.SetCompositionReference(&corev1.ObjectReference{Name: selected})
 	return errors.Wrap(r.client.Update(ctx, cp), errUpdateComposite)
+}
+
+// IBM Patch: update with default label from Configuration
+func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *APILabelSelectorResolver) {
+
+	configurationName := "ibm-crossplane-bedrock-shim-config"
+	d := &configv1.Configuration{}
+	nn := types.NamespacedName{Name: configurationName}
+
+	if err := r.client.Get(ctx, nn, d); err != nil {
+		return
+	}
+
+	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
+		labels["provider"] = provider
+	}
 }
 
 // NewAPIDefaultCompositionSelector returns a APIDefaultCompositionSelector.
