@@ -314,7 +314,7 @@ func TestSelectorResolver(t *testing.T) {
 			args: args{
 				kube: &test.MockClient{
 					MockUpdate: test.NewMockUpdateFn(nil),
-          MockGet:    test.NewMockGetFn(nil),
+					MockGet:    test.NewMockGetFn(nil),
 					MockList: func(_ context.Context, obj client.ObjectList, _ ...client.ListOption) error {
 						compList := &v1.CompositionList{
 							Items: []v1.Composition{
@@ -624,4 +624,3 @@ func TestAPINamingConfigurator(t *testing.T) {
 		})
 	}
 }
-
