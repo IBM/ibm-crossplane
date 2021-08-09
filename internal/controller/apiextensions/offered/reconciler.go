@@ -70,7 +70,10 @@ const (
 )
 
 // Wait strings.
-const waitCRDelete = "waiting for defined composite resource claims to be deleted"
+const (
+	waitCRDelete     = "waiting for defined composite resource claims to be deleted"
+	waitCRDEstablish = "waiting for composite resource claim CustomResourceDefinition to be established"
+)
 
 // Event reasons.
 const (
@@ -351,11 +354,19 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	// }
 	// r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
 
-	// if !xcrd.IsEstablished(crd.Status) {
-	//	log.Debug(waitCRDEstablish)
-	//	r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
-	//	return reconcile.Result{RequeueAfter: tinyWait}, nil
-	// }
+	nncrd := types.NamespacedName{Name: crd.GetName()}
+
+	if err := r.client.Get(ctx, nncrd, crd); err != nil {
+		log.Debug(errGetCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errGetCRD)))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
+
+	if !xcrd.IsEstablished(crd.Status) {
+		log.Debug(waitCRDEstablish)
+		r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
+		return reconcile.Result{RequeueAfter: tinyWait}, nil
+	}
 
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,
 		resource.CompositeClaimKind(d.GetClaimGroupVersionKind()),

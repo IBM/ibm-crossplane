@@ -543,64 +543,6 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{Requeue: false},
 			},
 		},
-		"SuccessfulUpdateControllerVersion": {
-			reason: "We should not requeue after a short wait if we successfully ensured our CRD exists, the old controller stopped, and the new one started.",
-			args: args{
-				mgr: &fake.Manager{},
-				opts: []ReconcilerOption{
-					WithClientApplicator(resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(obj runtime.Object) error {
-								d := obj.(*v1.CompositeResourceDefinition)
-								d.Spec.Versions = []v1.CompositeResourceDefinitionVersion{
-									{Name: "old", Referenceable: false},
-									{Name: "new", Referenceable: true},
-								}
-								d.Status.Controllers.CompositeResourceTypeRef = v1.TypeReference{APIVersion: "old"}
-								return nil
-							}),
-							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(o runtime.Object) error {
-								want := &v1.CompositeResourceDefinition{}
-								want.Spec.Versions = []v1.CompositeResourceDefinitionVersion{
-									{Name: "old", Referenceable: false},
-									{Name: "new", Referenceable: true},
-								}
-								want.Status.Controllers.CompositeResourceTypeRef = v1.TypeReference{APIVersion: "new"}
-								want.Status.SetConditions(v1.WatchingComposite())
-
-								if diff := cmp.Diff(want, o); diff != "" {
-									t.Errorf("-want, +got:\n%s", diff)
-								}
-								return nil
-							}),
-						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
-							return nil
-						}),
-					}),
-					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
-						return &extv1.CustomResourceDefinition{
-							Status: extv1.CustomResourceDefinitionStatus{
-								Conditions: []extv1.CustomResourceDefinitionCondition{
-									{Type: extv1.Established, Status: extv1.ConditionTrue},
-								},
-							},
-						}, nil
-					})),
-					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
-						return nil
-					}}),
-					WithControllerEngine(&MockEngine{
-						MockErr:   func(name string) error { return nil },
-						MockStart: func(_ string, _ kcontroller.Options, _ ...controller.Watch) error { return nil },
-						MockStop:  func(_ string) {},
-					}),
-				},
-			},
-			want: want{
-				r: reconcile.Result{Requeue: false},
-			},
-		},
 	}
 
 	for name, tc := range cases {

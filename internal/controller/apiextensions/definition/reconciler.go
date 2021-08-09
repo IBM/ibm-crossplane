@@ -67,7 +67,10 @@ const (
 )
 
 // Wait strings.
-const waitCRDelete = "waiting for defined composite resources to be deleted"
+const (
+	waitCRDelete     = "waiting for defined composite resources to be deleted"
+	waitCRDEstablish = "waiting for composite resource CustomResourceDefinition to be established"
+)
 
 // Event reasons.
 const (
@@ -347,11 +350,18 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	//  }
 	// r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
 
-	// if !xcrd.IsEstablished(crd.Status) {
-	//	log.Debug(waitCRDEstablish)
-	//	r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
-	//	return reconcile.Result{RequeueAfter: tinyWait}, nil
-	// }
+	nncrd := types.NamespacedName{Name: crd.GetName()}
+	if err := r.client.Get(ctx, nncrd, crd); err != nil {
+		log.Debug(errGetCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
+
+	if !xcrd.IsEstablished(crd.Status) {
+		log.Debug(waitCRDEstablish)
+		r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
+		return reconcile.Result{RequeueAfter: tinyWait}, nil
+	}
 
 	if err := r.composite.Err(composite.ControllerName(d.GetName())); err != nil {
 		log.Debug("Composite resource controller encountered an error", "error", err)
