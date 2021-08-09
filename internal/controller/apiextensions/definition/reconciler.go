@@ -69,7 +69,6 @@ const (
 // Wait strings.
 const (
 	waitCRDelete     = "waiting for defined composite resources to be deleted"
-	waitCRDEstablish = "waiting for composite resource CustomResourceDefinition to be established"
 )
 
 // Event reasons.
