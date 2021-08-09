@@ -348,13 +348,14 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	//	r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
 	//	return reconcile.Result{RequeueAfter: shortWait}, nil
 	//  }
-	r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+	// r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
 
-	if !xcrd.IsEstablished(crd.Status) {
-		log.Debug(waitCRDEstablish)
-		r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
-		return reconcile.Result{RequeueAfter: tinyWait}, nil
-	}
+
+	// if !xcrd.IsEstablished(crd.Status) {
+	//	log.Debug(waitCRDEstablish)
+	//	r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
+	//	return reconcile.Result{RequeueAfter: tinyWait}, nil
+	// }
 
 	if err := r.composite.Err(composite.ControllerName(d.GetName())); err != nil {
 		log.Debug("Composite resource controller encountered an error", "error", err)

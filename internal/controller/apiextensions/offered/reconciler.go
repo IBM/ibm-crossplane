@@ -352,13 +352,13 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	//	r.record.Event(d, event.Warning(reasonOfferXRC, errors.Wrap(err, errApplyCRD)))
 	//	// return reconcile.Result{RequeueAfter: shortWait}, nil
 	// }
-	r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
+	// r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
 
-	if !xcrd.IsEstablished(crd.Status) {
-		log.Debug(waitCRDEstablish)
-		r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
-		return reconcile.Result{RequeueAfter: tinyWait}, nil
-	}
+	// if !xcrd.IsEstablished(crd.Status) {
+	//	log.Debug(waitCRDEstablish)
+	//	r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
+	//	return reconcile.Result{RequeueAfter: tinyWait}, nil
+	// }
 
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,
 		resource.CompositeClaimKind(d.GetClaimGroupVersionKind()),
