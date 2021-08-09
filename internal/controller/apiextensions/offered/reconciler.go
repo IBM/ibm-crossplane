@@ -357,7 +357,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
-		// return reconcile.Result{RequeueAfter: tinyWait}, nil
+		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,

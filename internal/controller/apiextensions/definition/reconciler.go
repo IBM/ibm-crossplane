@@ -353,7 +353,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
-		// return reconcile.Result{RequeueAfter: tinyWait}, nil
+		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 
 	if err := r.composite.Err(composite.ControllerName(d.GetName())); err != nil {

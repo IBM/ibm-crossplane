@@ -470,31 +470,6 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
-		"ApplyCRDError": {
-			reason: "We should requeue after a short wait if we encounter an error while applying our CRD.",
-			args: args{
-				mgr: &fake.Manager{},
-				opts: []ReconcilerOption{
-					WithClientApplicator(resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil),
-						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
-							return errBoom
-						}),
-					}),
-					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
-						return &extv1.CustomResourceDefinition{}, nil
-					})),
-					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
-						return nil
-					}}),
-				},
-			},
-			want: want{
-				r: reconcile.Result{RequeueAfter: shortWait},
-			},
-		},
 		"CustomResourceDefinitionIsNotEstablished": {
 			reason: "We should requeue after a tiny wait if we're waiting for a newly created CRD to become established.",
 			args: args{
