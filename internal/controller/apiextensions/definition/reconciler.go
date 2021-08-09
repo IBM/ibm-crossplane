@@ -67,9 +67,7 @@ const (
 )
 
 // Wait strings.
-const (
-	waitCRDelete     = "waiting for defined composite resources to be deleted"
-)
+const waitCRDelete = "waiting for defined composite resources to be deleted"
 
 // Event reasons.
 const (
@@ -348,7 +346,6 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	//	return reconcile.Result{RequeueAfter: shortWait}, nil
 	//  }
 	// r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
-
 
 	// if !xcrd.IsEstablished(crd.Status) {
 	//	log.Debug(waitCRDEstablish)

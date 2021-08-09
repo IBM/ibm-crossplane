@@ -70,9 +70,7 @@ const (
 )
 
 // Wait strings.
-const (
-	waitCRDelete     = "waiting for defined composite resource claims to be deleted"
-)
+const waitCRDelete = "waiting for defined composite resource claims to be deleted"
 
 // Event reasons.
 const (
