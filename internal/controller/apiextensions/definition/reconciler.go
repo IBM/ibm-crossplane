@@ -57,7 +57,6 @@ const (
 	errGetXRD          = "cannot get CompositeResourceDefinition"
 	errRenderCRD       = "cannot render composite resource CustomResourceDefinition"
 	errGetCRD          = "cannot get composite resource CustomResourceDefinition"
-	errApplyCRD        = "cannot apply rendered composite resource CustomResourceDefinition"
 	errUpdateStatus    = "cannot update status of CompositeResourceDefinition"
 	errStartController = "cannot start composite resource controller"
 	errAddFinalizer    = "cannot add composite resource finalizer"
@@ -344,12 +343,12 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	//if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+	//  if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
 	//	log.Debug(errApplyCRD, "error", err)
 	//	r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
 	//	return reconcile.Result{RequeueAfter: shortWait}, nil
-	//}
-	//r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+	//  }
+	r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
