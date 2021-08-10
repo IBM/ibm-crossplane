@@ -57,6 +57,7 @@ const (
 	errGetXRD          = "cannot get CompositeResourceDefinition"
 	errRenderCRD       = "cannot render composite resource CustomResourceDefinition"
 	errGetCRD          = "cannot get composite resource CustomResourceDefinition"
+	errApplyCRD        = "cannot apply rendered composite resource CustomResourceDefinition"
 	errUpdateStatus    = "cannot update status of CompositeResourceDefinition"
 	errStartController = "cannot start composite resource controller"
 	errAddFinalizer    = "cannot add composite resource finalizer"
@@ -247,6 +248,11 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
+	// fmt.Println("--------start-------")
+	// data, err := json.Marshal(crd)
+	// fmt.Printf("%s\n", data)
+	// fmt.Println("---------------")
+
 	r.record.Event(d, event.Normal(reasonRenderCRD, "Rendered composite resource CustomResourceDefinition"))
 
 	if meta.WasDeleted(d) {
@@ -343,19 +349,24 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	//  if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-	//	log.Debug(errApplyCRD, "error", err)
-	//	r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
-	//	return reconcile.Result{RequeueAfter: shortWait}, nil
-	//  }
-	// r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
-
-	nncrd := types.NamespacedName{Name: crd.GetName()}
-	if err := r.client.Get(ctx, nncrd, crd); err != nil {
-		log.Debug(errGetCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
+	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+		log.Debug(errApplyCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
+	r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+
+	// nncrd := types.NamespacedName{Name: crd.GetName()}
+	// if err := r.client.Get(ctx, nncrd, crd); err != nil {
+	//	log.Debug(errGetCRD, "error", err)
+	//	r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
+	//	return reconcile.Result{RequeueAfter: shortWait}, nil
+	// }
+
+	// var c extv1.CustomResourceDefinitionCondition
+	// c.Type = extv1.Established
+	// c.Status = extv1.ConditionTrue
+	// append(crd.Status.Conditions, c)
 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
