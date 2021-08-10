@@ -349,12 +349,22 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-		log.Debug(errApplyCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
+	ccrd := &extv1.CustomResourceDefinition{}
+	cnn := types.NamespacedName{Name: crd.GetName()}
+	if err := r.client.Get(ctx, cnn, ccrd); err != nil {
+		log.Debug(errGetCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
-	r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+
+	if len(ccrd.ObjectMeta.OwnerReferences) == 0 {
+		if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+			log.Debug(errApplyCRD, "error", err)
+			r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+		r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+	}
 
 	// nncrd := types.NamespacedName{Name: crd.GetName()}
 	// if err := r.client.Get(ctx, nncrd, crd); err != nil {
