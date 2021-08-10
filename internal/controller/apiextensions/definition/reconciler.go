@@ -234,12 +234,15 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		// don't need to take any action in that case.
 		log.Debug(errGetXRD, "error", err)
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetXRD)
-	}else {
-		fmt.Println("*****************")
-		fmt.Println("GOT - if err := r.client.Get(ctx, req.NamespacedName, d); err != nil {")
-		fmt.Println(d)
-		fmt.Println("*****************")
 	}
+	// else {
+	// 	fmt.Println("*****************")
+	// 	fmt.Println("GOT - if err := r.client.Get(ctx, req.NamespacedName, d); err != nil {")
+	// 	data, _ := json.Marshal(d)
+	// 	fmt.Printf("%s\n", data)
+	// 	fmt.Println()
+	// 	fmt.Println("*****************")
+	// }
 
 	log = log.WithValues(
 		"uid", d.GetUID(),
@@ -252,14 +255,17 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		log.Debug(errRenderCRD, "error", err)
 		r.record.Event(d, event.Warning(reasonRenderCRD, errors.Wrap(err, errRenderCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
-	}	else {
-	fmt.Println("############################")
-	fmt.Println("GOT CRD")
-	fmt.Println(d)
-	fmt.Println()
-	fmt.Println(crd)
-	fmt.Println("############################")
 	}
+	// else {
+	// 	fmt.Println("############################")
+	// 	fmt.Println("GOT CRD")
+	// 	data, _ := json.Marshal(d)
+	// 	fmt.Printf("%s\n", data)
+	// 	fmt.Println()
+	// 	data, _ = json.Marshal(crd)
+	// 	fmt.Printf("%s\n", data)
+	// 	fmt.Println("############################")
+	// }
 
 	// fmt.Println("--------start-------")
 	// data, err := json.Marshal(crd)
@@ -364,22 +370,22 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	ccrd := &extv1.CustomResourceDefinition{}
-	cnn := types.NamespacedName{Name: crd.GetName()}
-	if err := r.client.Get(ctx, cnn, ccrd); err != nil {
-		log.Debug(errGetCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
+	// ccrd := &extv1.CustomResourceDefinition{}
+	// cnn := types.NamespacedName{Name: crd.GetName()}
+	// if err := r.client.Get(ctx, cnn, ccrd); err != nil {
+	// 	log.Debug(errGetCRD, "error", err)
+	// 	r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
+	// 	return reconcile.Result{RequeueAfter: shortWait}, nil
+	// }
+
+	// if len(ccrd.ObjectMeta.OwnerReferences) == 0 {
+	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+		log.Debug(errApplyCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
-
-	if len(ccrd.ObjectMeta.OwnerReferences) == 0 {
-		if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-			log.Debug(errApplyCRD, "error", err)
-			r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
-			return reconcile.Result{RequeueAfter: shortWait}, nil
-		}
-		r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
-	}
+	r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+	// }
 
 	// nncrd := types.NamespacedName{Name: crd.GetName()}
 	// if err := r.client.Get(ctx, nncrd, crd); err != nil {
@@ -396,9 +402,11 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
-		fmt.Println(d)
-		fmt.Println()
-		fmt.Println(crd)
+		// data, _ := json.Marshal(d)
+		// fmt.Printf("%s\n", data)
+		// fmt.Println()
+		// data, _ = json.Marshal(crd)
+		// fmt.Printf("%s\n", data)
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 

@@ -18,7 +18,6 @@ package offered
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -352,24 +351,24 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	// data, err := json.Marshal(crd)
 	// fmt.Printf("%s\n", data)
 
-	ccrd := &extv1.CustomResourceDefinition{}
-	cnn := types.NamespacedName{Name: crd.GetName()}
-	if err := r.client.Get(ctx, cnn, ccrd); err != nil {
-		log.Debug(errGetCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errGetCRD)))
+	// ccrd := &extv1.CustomResourceDefinition{}
+	// cnn := types.NamespacedName{Name: crd.GetName()}
+	// if err := r.client.Get(ctx, cnn, ccrd); err != nil {
+	// 	log.Debug(errGetCRD, "error", err)
+	// 	r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errGetCRD)))
+	// 	return reconcile.Result{RequeueAfter: shortWait}, nil
+	// }
+
+	// if len(ccrd.ObjectMeta.OwnerReferences) == 0 {
+	// if crd.OwnerReferences[0].UID != d.GetUID() {
+	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+		log.Debug(errApplyCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonOfferXRC, errors.Wrap(err, errApplyCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
-
-	if len(ccrd.ObjectMeta.OwnerReferences) == 0 {
-		if crd.OwnerReferences[0].UID != d.GetUID() {
-			if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-				log.Debug(errApplyCRD, "error", err)
-				r.record.Event(d, event.Warning(reasonOfferXRC, errors.Wrap(err, errApplyCRD)))
-				return reconcile.Result{RequeueAfter: shortWait}, nil
-			}
-			r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
-		}
-	}
+	r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
+	// }
+	// }
 
 	// nncrd := types.NamespacedName{Name: crd.GetName()}
 	// if err := r.client.Get(ctx, nncrd, crd); err != nil {
@@ -381,9 +380,9 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
-		fmt.Println(d)
-		fmt.Println()
-		fmt.Println(crd)
+		//fmt.Println(d)
+		//fmt.Println()
+		//fmt.Println(crd)
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 
