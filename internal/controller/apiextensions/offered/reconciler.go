@@ -18,6 +18,7 @@ package offered
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -377,9 +378,12 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	//	return reconcile.Result{RequeueAfter: shortWait}, nil
 	// }
 
-	if !xcrd.IsEstablished(ccrd.Status) {
+	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
+		fmt.Println(d)
+		fmt.Println()
+		fmt.Println(crd)
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 

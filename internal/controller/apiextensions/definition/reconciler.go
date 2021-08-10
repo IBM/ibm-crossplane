@@ -18,6 +18,7 @@ package definition
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -233,6 +234,11 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		// don't need to take any action in that case.
 		log.Debug(errGetXRD, "error", err)
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetXRD)
+	}else {
+		fmt.Println("*****************")
+		fmt.Println("GOT - if err := r.client.Get(ctx, req.NamespacedName, d); err != nil {")
+		fmt.Println(d)
+		fmt.Println("*****************")
 	}
 
 	log = log.WithValues(
@@ -246,6 +252,13 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		log.Debug(errRenderCRD, "error", err)
 		r.record.Event(d, event.Warning(reasonRenderCRD, errors.Wrap(err, errRenderCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}	else {
+	fmt.Println("############################")
+	fmt.Println("GOT CRD")
+	fmt.Println(d)
+	fmt.Println()
+	fmt.Println(crd)
+	fmt.Println("############################")
 	}
 
 	// fmt.Println("--------start-------")
@@ -260,6 +273,8 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		if err := r.client.Status().Update(ctx, d); err != nil {
 			log.Debug(errUpdateStatus, "error", err)
 			return reconcile.Result{RequeueAfter: shortWait}, nil
+		} else {
+			fmt.Println("Updated if err := r.client.Status().Update(ctx, d); err != nil {")
 		}
 
 		nn := types.NamespacedName{Name: crd.GetName()}
@@ -378,9 +393,12 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	// c.Status = extv1.ConditionTrue
 	// append(crd.Status.Conditions, c)
 
-	if !xcrd.IsEstablished(ccrd.Status) {
+	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
+		fmt.Println(d)
+		fmt.Println()
+		fmt.Println(crd)
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 
