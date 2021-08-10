@@ -377,7 +377,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	//	return reconcile.Result{RequeueAfter: shortWait}, nil
 	// }
 
-	if !xcrd.IsEstablished(crd.Status) {
+	if !xcrd.IsEstablished(ccrd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonOfferXRC, waitCRDEstablish))
 		return reconcile.Result{RequeueAfter: tinyWait}, nil

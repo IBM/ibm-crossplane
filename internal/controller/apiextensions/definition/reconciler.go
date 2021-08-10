@@ -378,7 +378,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	// c.Status = extv1.ConditionTrue
 	// append(crd.Status.Conditions, c)
 
-	if !xcrd.IsEstablished(crd.Status) {
+	if !xcrd.IsEstablished(ccrd.Status) {
 		log.Debug(waitCRDEstablish)
 		r.record.Event(d, event.Normal(reasonEstablishXR, waitCRDEstablish))
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
