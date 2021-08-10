@@ -18,7 +18,6 @@ package definition
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -279,8 +278,6 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		if err := r.client.Status().Update(ctx, d); err != nil {
 			log.Debug(errUpdateStatus, "error", err)
 			return reconcile.Result{RequeueAfter: shortWait}, nil
-		} else {
-			fmt.Println("Updated if err := r.client.Status().Update(ctx, d); err != nil {")
 		}
 
 		nn := types.NamespacedName{Name: crd.GetName()}
