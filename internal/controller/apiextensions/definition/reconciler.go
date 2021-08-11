@@ -57,7 +57,6 @@ const (
 	errGetXRD          = "cannot get CompositeResourceDefinition"
 	errRenderCRD       = "cannot render composite resource CustomResourceDefinition"
 	errGetCRD          = "cannot get composite resource CustomResourceDefinition"
-	errApplyCRD        = "cannot apply rendered composite resource CustomResourceDefinition"
 	errUpdateStatus    = "cannot update status of CompositeResourceDefinition"
 	errStartController = "cannot start composite resource controller"
 	errAddFinalizer    = "cannot add composite resource finalizer"
