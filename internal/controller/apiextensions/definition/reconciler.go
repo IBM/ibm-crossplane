@@ -344,12 +344,22 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-		log.Debug(errApplyCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
-		return reconcile.Result{RequeueAfter: shortWait}, nil
-	}
-	r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
+	// r.client.Patch(ctx, crd, )
+	// if err := r.client.Delete(ctx, crd); err != nil {
+	// 	fmt.Println("##############################")
+	// 	fmt.Println("Problem in DELETE")
+	// 	log.Debug("ERROR IN DELETE", "error", err)
+	// 	fmt.Println("##############################")
+	// }
+	// if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+	// 	fmt.Println("****************************")
+	// 	fmt.Println("Problem in APPLY")
+	// 	log.Debug(errApplyCRD, "error", err)
+	// 	fmt.Println("****************************")
+	// 	r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
+	// 	return reconcile.Result{RequeueAfter: shortWait}, nil
+	// }
+	// r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
