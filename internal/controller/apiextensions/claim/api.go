@@ -18,6 +18,7 @@ package claim
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -60,15 +61,19 @@ func NewAPIBinder(c client.Client, t runtime.ObjectTyper) *APIBinder {
 // Bind the supplied claim to the supplied composite.
 func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp resource.Composite) error {
 	// IBM Patch: Move resourceRef to status
+	fmt.Println("*************1*************")
 	existing := GetResourceReference(cm)
+	fmt.Println("*************2*************")
 	proposed := meta.ReferenceTo(cp, resource.MustGetKind(cp, a.typer))
+	fmt.Println("*************3*************")
 	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
 		return errors.New(errBindClaimConflict)
 	}
+	fmt.Println("*************4*************")
 
 	// Propagate the actual external name back from the composite to the claim.
 	meta.SetExternalName(cm, meta.GetExternalName(cp))
-
+	fmt.Println("*************5*************")
 	// We set the claim's resource reference first in order to reduce the chance
 	// of leaking newly created composite resources. We want as few calls that
 	// could fail and trigger a requeue between composite creation and reference
@@ -77,17 +82,22 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	if err := SetResourceRef(ctx, a.client, cm, proposed); err != nil {
 		return err
 	}
+	fmt.Println("*************6*************")
 	if err := a.client.Update(ctx, cm); err != nil {
 		return errors.Wrap(err, errUpdateClaim)
 	}
+	fmt.Println("*************7*************")
 
 	existing = cp.GetClaimReference()
+	fmt.Println("*************8*************")
 	proposed = meta.ReferenceTo(cm, resource.MustGetKind(cm, a.typer))
+	fmt.Println("*************9*************")
 	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
 		return errors.New(errBindCompositeConflict)
 	}
-
+	fmt.Println("*************10*************")
 	cp.SetClaimReference(proposed)
+	fmt.Println("*************11*************")
 	return errors.Wrap(a.client.Update(ctx, cp), errUpdateComposite)
 }
 
