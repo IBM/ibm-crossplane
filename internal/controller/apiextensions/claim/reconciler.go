@@ -380,6 +380,25 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	log.Debug("Successfully applied composite resource")
 	record.Event(cm, event.Normal(reasonConfigure, "Successfully applied composite resource"))
 
+	// cpCluster := r.newComposite()
+
+	// nn := types.NamespacedName{Name: "kafka-skip-user-example1-kf742", Namespace: cp.GetNamespace()}
+	// if err := r.client.Get(ctx, nn, cpCluster); err != nil {
+	// 	fmt.Println("Cannot get cpCluster")
+	// }
+
+	// aaa, _ := json.Marshal(cp)
+	// bbb, _ := json.Marshal(cpCluster)
+	// cpCluster.SetGeneration(999)
+	// fmt.Printf("Trying to update this: \n %s\n \n but have this: \n%s\n \n", aaa, bbb)
+
+	// l := {}
+	// if err := r.client.List(ctx, l); err != nil {
+	//	log.Debug(errListCRDs, "error", err)
+	//	r.record.Event(pr, event.Warning(reasonApplyRoles, errors.Wrap(err, errListCRDs)))
+	//	return reconcile.Result{RequeueAfter: shortWait}, nil
+	// }
+
 	if err := r.claim.Bind(ctx, cm, cp); err != nil {
 		// If we didn't hit this error last time we'll be requeued implicitly
 		// due to the status update. Otherwise we want to retry after a brief

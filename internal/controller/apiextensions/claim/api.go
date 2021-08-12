@@ -98,6 +98,16 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	fmt.Println("*************10*************")
 	cp.SetClaimReference(proposed)
 	fmt.Println("*************11*************")
+
+	// nn := types.NamespacedName{Name: cp.GetName(), Namespace: cp.GetNamespace()}
+	// x := cp
+	// if err := a.client.Get(ctx, nn, x); err != nil {
+	//	fmt.Println("Cannot get CHECKCP")
+	// }
+	// aaa, _ := json.Marshal(cp)
+	// bbb, _ := json.Marshal(x)
+	// fmt.Printf("Trying to update this: \n %s\n \n but have this: \n%s\n \n", aaa, bbb)
+
 	return errors.Wrap(a.client.Update(ctx, cp), errUpdateComposite)
 }
 

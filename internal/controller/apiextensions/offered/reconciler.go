@@ -60,7 +60,6 @@ const (
 	errGetXRD          = "cannot get CompositeResourceDefinition"
 	errRenderCRD       = "cannot render composite resource claim CustomResourceDefinition"
 	errGetCRD          = "cannot get composite resource claim CustomResourceDefinition"
-	errApplyCRD        = "cannot apply rendered composite resource claim CustomResourceDefinition"
 	errUpdateStatus    = "cannot update status of CompositeResourceDefinition"
 	errStartController = "cannot start composite resource claim controller"
 	errAddFinalizer    = "cannot add composite resource claim finalizer"
@@ -348,19 +347,19 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-		log.Debug(errApplyCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonOfferXRC, errors.Wrap(err, errApplyCRD)))
-		return reconcile.Result{RequeueAfter: shortWait}, nil
-	}
-	r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
-
-	// nn := types.NamespacedName{Name: crd.GetName()}
-	// if err := r.client.Get(ctx, nn, crd); resource.IgnoreNotFound(err) != nil {
-	// 	log.Debug(errGetCRD, "error", err)
-	// 	r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errGetCRD)))
+	// if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+	// 	log.Debug(errApplyCRD, "error", err)
+	// 	r.record.Event(d, event.Warning(reasonOfferXRC, errors.Wrap(err, errApplyCRD)))
 	// 	return reconcile.Result{RequeueAfter: shortWait}, nil
 	// }
+	// r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
+
+	nn := types.NamespacedName{Name: crd.GetName()}
+	if err := r.client.Get(ctx, nn, crd); resource.IgnoreNotFound(err) != nil {
+		log.Debug(errGetCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errGetCRD)))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
