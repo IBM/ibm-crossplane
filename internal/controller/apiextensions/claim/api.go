@@ -68,6 +68,7 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 
 	// Propagate the actual external name back from the composite to the claim.
 	meta.SetExternalName(cm, meta.GetExternalName(cp))
+
 	// We set the claim's resource reference first in order to reduce the chance
 	// of leaking newly created composite resources. We want as few calls that
 	// could fail and trigger a requeue between composite creation and reference
@@ -85,6 +86,7 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
 		return errors.New(errBindCompositeConflict)
 	}
+
 	cp.SetClaimReference(proposed)
 	return errors.Wrap(a.client.Update(ctx, cp), errUpdateComposite)
 }
