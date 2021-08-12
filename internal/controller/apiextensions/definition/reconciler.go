@@ -343,29 +343,16 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	// r.client.Patch(ctx, crd, )
-	// if err := r.client.Delete(ctx, crd); err != nil {
-	// 	fmt.Println("##############################")
-	// 	fmt.Println("Problem in DELETE")
-	// 	log.Debug("ERROR IN DELETE", "error", err)
-	// 	fmt.Println("##############################")
-	// }
-	// if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-	// 	fmt.Println("****************************")
-	// 	fmt.Println("Problem in APPLY")
-	// 	log.Debug(errApplyCRD, "error", err)
-	// 	fmt.Println("****************************")
-	// 	r.record.Event(d, event.Warning(reasonEstablishXR, errors.Wrap(err, errApplyCRD)))
-	// 	return reconcile.Result{RequeueAfter: shortWait}, nil
-	// }
-	// r.record.Event(d, event.Normal(reasonEstablishXR, "Applied composite resource CustomResourceDefinition"))
-
+	// IBM Patch: Reduce cluster permission
+	// do not apply rendered CRD. But GET is needed to update variable
+	// with "Established" condition
 	nn := types.NamespacedName{Name: crd.GetName()}
 	if err := r.client.Get(ctx, nn, crd); resource.IgnoreNotFound(err) != nil {
 		log.Debug(errGetCRD, "error", err)
 		r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
+	// IBM Patch end: Reduce cluster permission
 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)

@@ -347,19 +347,16 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	// if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-	// 	log.Debug(errApplyCRD, "error", err)
-	// 	r.record.Event(d, event.Warning(reasonOfferXRC, errors.Wrap(err, errApplyCRD)))
-	// 	return reconcile.Result{RequeueAfter: shortWait}, nil
-	// }
-	// r.record.Event(d, event.Normal(reasonOfferXRC, "Applied composite resource claim CustomResourceDefinition"))
-
+	// IBM Patch: Reduce cluster permission
+	// do not apply rendered CRD. But GET is needed to update variable
+	// with "Established" condition
 	nn := types.NamespacedName{Name: crd.GetName()}
 	if err := r.client.Get(ctx, nn, crd); resource.IgnoreNotFound(err) != nil {
 		log.Debug(errGetCRD, "error", err)
 		r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errGetCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
+	// IBM Patch end: Reduce cluster permission
 
 	if !xcrd.IsEstablished(crd.Status) {
 		log.Debug(waitCRDEstablish)
