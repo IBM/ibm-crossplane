@@ -59,6 +59,26 @@ GO111MODULE = on
 HELM_VERSION=v2.17.0
 -include build/makelib/k8s_tools.mk
 
+# helm download and install
+ifeq ($(USE_HELM3),false)
+$(HELM):
+	@$(INFO) installing helm $(HOSTOS)-$(HOSTARCH)
+	@mkdir -p $(TOOLS_HOST_DIR)/tmp-helm
+	@curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$(HOSTOS)-$(HOSTARCH).tar.gz | tar -xz -C $(TOOLS_HOST_DIR)/tmp-helm
+	@mv $(TOOLS_HOST_DIR)/tmp-helm/$(HOSTOS)-$(HOSTARCH)/helm $(HELM)
+	@rm -fr $(TOOLS_HOST_DIR)/tmp-helm
+	@$(OK) installing helm $(HOSTOS)-$(HOSTARCH)
+endif
+
+# helm3 download and install
+$(HELM3):
+	@$(INFO) installing helm3 $(HOSTOS)-$(HOSTARCH)
+	@mkdir -p $(TOOLS_HOST_DIR)/tmp-helm3
+	@curl -fsSL https://get.helm.sh/helm-$(HELM3_VERSION)-$(HOSTOS)-$(HOSTARCH).tar.gz | tar -xz -C $(TOOLS_HOST_DIR)/tmp-helm3
+	@mv $(TOOLS_HOST_DIR)/tmp-helm3/$(HOSTOS)-$(HOSTARCH)/helm $(HELM3)
+	@rm -fr $(TOOLS_HOST_DIR)/tmp-helm3
+	@$(OK) installing helm3 $(HOSTOS)-$(HOSTARCH)
+
 # ====================================================================================
 # Setup Helm
 
