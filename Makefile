@@ -59,6 +59,7 @@ GO111MODULE = on
 HELM_VERSION=v2.17.0
 -include build/makelib/k8s_tools.mk
 
+HOSTARCH := $(shell uname -m | sed 's/x86_64/amd64/')
 # helm download and install
 ifeq ($(USE_HELM3),false)
 $(HELM):
