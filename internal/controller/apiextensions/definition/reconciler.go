@@ -347,7 +347,7 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	// do not apply rendered CRD. But GET is needed to update variable
 	// with "Established" condition
 	nn := types.NamespacedName{Name: crd.GetName()}
-	if err := r.client.Get(ctx, nn, crd); resource.IgnoreNotFound(err) != nil {
+	if err := r.client.Get(ctx, nn, crd); err != nil {
 		log.Debug(errGetCRD, "error", err)
 		r.record.Event(d, event.Warning(reasonTerminateXR, errors.Wrap(err, errGetCRD)))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
