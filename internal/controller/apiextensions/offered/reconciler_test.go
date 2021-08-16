@@ -470,31 +470,6 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
-		"ApplyCRDError": {
-			reason: "We should requeue after a short wait if we encounter an error while applying our CRD.",
-			args: args{
-				mgr: &fake.Manager{},
-				opts: []ReconcilerOption{
-					WithClientApplicator(resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil),
-						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
-							return errBoom
-						}),
-					}),
-					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
-						return &extv1.CustomResourceDefinition{}, nil
-					})),
-					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
-						return nil
-					}}),
-				},
-			},
-			want: want{
-				r: reconcile.Result{RequeueAfter: shortWait},
-			},
-		},
 		"CustomResourceDefinitionIsNotEstablished": {
 			reason: "We should requeue after a tiny wait if we're waiting for a newly created CRD to become established.",
 			args: args{
@@ -518,6 +493,39 @@ func TestReconcile(t *testing.T) {
 			},
 			want: want{
 				r: reconcile.Result{RequeueAfter: tinyWait},
+			},
+		},
+		"GetEstablishedCustomResourceDefinitionError": {
+			reason: "We should requeue after a short wait if we encounter an error getting a CRD.",
+			args: args{
+				mgr: &fake.Manager{},
+				opts: []ReconcilerOption{
+					WithClientApplicator(resource.ClientApplicator{
+						Client: &test.MockClient{
+							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+								switch v := o.(type) {
+								case *v1.CompositeResourceDefinition:
+									d := v1.CompositeResourceDefinition{}
+									d.SetDeletionTimestamp(nil)
+									*v = d
+								case *extv1.CustomResourceDefinition:
+									return errBoom
+								}
+								return nil
+							}),
+							MockStatusUpdate: test.NewMockStatusUpdateFn(nil),
+						},
+					}),
+					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
+						return &extv1.CustomResourceDefinition{}, nil
+					})),
+					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
+						return nil
+					}}),
+				},
+			},
+			want: want{
+				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
 		"StartControllerError": {
@@ -593,66 +601,6 @@ func TestReconcile(t *testing.T) {
 						MockErr:   func(name string) error { return errBoom }, // This error should only be logged.
 						MockStart: func(_ string, _ kcontroller.Options, _ ...controller.Watch) error { return nil }},
 					),
-				},
-			},
-			want: want{
-				r: reconcile.Result{Requeue: false},
-			},
-		},
-		"SuccessfulUpdateControllerVersion": {
-			reason: "We should not requeue after a short wait if we successfully ensured our CRD exists, the old controller stopped, and the new one started.",
-			args: args{
-				mgr: &fake.Manager{},
-				opts: []ReconcilerOption{
-					WithClientApplicator(resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(obj runtime.Object) error {
-								d := obj.(*v1.CompositeResourceDefinition)
-								d.Spec.ClaimNames = &extv1.CustomResourceDefinitionNames{}
-								d.Spec.Versions = []v1.CompositeResourceDefinitionVersion{
-									{Name: "old", Referenceable: false},
-									{Name: "new", Referenceable: true},
-								}
-								d.Status.Controllers.CompositeResourceClaimTypeRef = v1.TypeReference{APIVersion: "old"}
-								return nil
-							}),
-							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(o runtime.Object) error {
-								want := &v1.CompositeResourceDefinition{}
-								want.Spec.ClaimNames = &extv1.CustomResourceDefinitionNames{}
-								want.Spec.Versions = []v1.CompositeResourceDefinitionVersion{
-									{Name: "old", Referenceable: false},
-									{Name: "new", Referenceable: true},
-								}
-								want.Status.Controllers.CompositeResourceClaimTypeRef = v1.TypeReference{APIVersion: "new"}
-								want.Status.SetConditions(v1.WatchingClaim())
-
-								if diff := cmp.Diff(want, o); diff != "" {
-									t.Errorf("-want, +got:\n%s", diff)
-								}
-								return nil
-							}),
-						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
-							return nil
-						}),
-					}),
-					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
-						return &extv1.CustomResourceDefinition{
-							Status: extv1.CustomResourceDefinitionStatus{
-								Conditions: []extv1.CustomResourceDefinitionCondition{
-									{Type: extv1.Established, Status: extv1.ConditionTrue},
-								},
-							},
-						}, nil
-					})),
-					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
-						return nil
-					}}),
-					WithControllerEngine(&MockEngine{
-						MockErr:   func(name string) error { return nil },
-						MockStart: func(_ string, _ kcontroller.Options, _ ...controller.Watch) error { return nil },
-						MockStop:  func(_ string) {},
-					}),
 				},
 			},
 			want: want{
