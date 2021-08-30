@@ -69,12 +69,13 @@ kind: Configuration
 metadata:
   name: test`)
 
-	v1XRDBytes = []byte(`apiVersion: apiextensions.crossplane.io/v1
+	// IBM Patch: Change API group name to apiextensions.ibm.crosslane.io
+	v1XRDBytes = []byte(`apiVersion: apiextensions.ibm.crossplane.io/v1
 kind: CompositeResourceDefinition
 metadata:
   name: test`)
 
-	v1CompBytes = []byte(`apiVersion: apiextensions.crossplane.io/v1
+	v1CompBytes = []byte(`apiVersion: apiextensions.ibm.crossplane.io/v1
 kind: Composition
 metadata:
   name: test`)

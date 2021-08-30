@@ -52,7 +52,8 @@ const (
 
 	timeout        = 1 * time.Minute
 	maxConcurrency = 5
-	finalizer      = "offered.apiextensions.crossplane.io"
+	// IBM Patch: Change API group name to apiextensions.ibm.crosslane.io
+	finalizer = "offered.apiextensions.ibm.crossplane.io"
 )
 
 // Error strings.

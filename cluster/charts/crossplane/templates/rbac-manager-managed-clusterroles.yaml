@@ -140,7 +140,7 @@ rules:
   verbs: [get, list, watch]
 # Crossplane editors have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
