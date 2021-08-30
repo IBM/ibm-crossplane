@@ -52,7 +52,8 @@ const (
 
 	timeout        = 2 * time.Minute
 	maxConcurrency = 5
-	finalizer      = "defined.apiextensions.crossplane.io"
+	// IBM Patch: Change API group name to apiextensions.ibm.crosslane.io
+	finalizer = "defined.apiextensions.ibm.crossplane.io"
 
 	errGetXRD          = "cannot get CompositeResourceDefinition"
 	errRenderCRD       = "cannot render composite resource CustomResourceDefinition"

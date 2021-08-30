@@ -51,7 +51,8 @@ const (
 )
 
 const (
-	finalizer = "lock.pkg.crossplane.io"
+	// IBM Patch: Change API group name to pkg.ibm.crosslane.io
+	finalizer = "lock.pkg.ibm.crossplane.io"
 
 	errGetLock              = "cannot get package lock"
 	errAddFinalizer         = "cannot add lock finalizer"

@@ -50,7 +50,8 @@ const (
 )
 
 const (
-	finalizer = "revision.pkg.crossplane.io"
+	// IBM Patch: Change API group name to pkg.ibm.crosslane.io
+	finalizer = "revision.pkg.ibm.crossplane.io"
 
 	errGetPackageRevision = "cannot get package revision"
 	errUpdateStatus       = "cannot update package revision status"

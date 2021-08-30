@@ -40,7 +40,8 @@ import (
 )
 
 const (
-	parentLabel      = "pkg.crossplane.io/package"
+	// IBM Patch: Change API group name to pkg.ibm.crosslane.io
+	parentLabel      = "pkg.ibm.crossplane.io/package"
 	reconcileTimeout = 1 * time.Minute
 
 	shortWait     = 30 * time.Second

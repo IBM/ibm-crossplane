@@ -54,16 +54,17 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 			Namespace:       namespace,
 			OwnerReferences: []metav1.OwnerReference{meta.AsController(meta.TypedReferenceTo(revision, v1.ProviderRevisionGroupVersionKind))},
 		},
+		// IBM Patch: Change API group name to pkg.ibm.crosslane.io
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"pkg.crossplane.io/revision": revision.GetName()},
+				MatchLabels: map[string]string{"pkg.ibm.crossplane.io/revision": revision.GetName()},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      provider.GetName(),
 					Namespace: namespace,
-					Labels:    map[string]string{"pkg.crossplane.io/revision": revision.GetName()},
+					Labels:    map[string]string{"pkg.ibm.crossplane.io/revision": revision.GetName()},
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
