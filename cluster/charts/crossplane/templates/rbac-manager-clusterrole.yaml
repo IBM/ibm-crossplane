@@ -28,7 +28,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources:
   - compositeresourcedefinitions
   verbs:
@@ -36,7 +36,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - pkg.crossplane.io
+  - pkg.ibm.crossplane.io
   resources:
   - providerrevisions
   verbs:

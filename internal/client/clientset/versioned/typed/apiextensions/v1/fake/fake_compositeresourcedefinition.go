@@ -35,9 +35,9 @@ type FakeCompositeResourceDefinitions struct {
 	Fake *FakeApiextensionsV1
 }
 
-var compositeresourcedefinitionsResource = schema.GroupVersionResource{Group: "apiextensions.crossplane.io", Version: "v1", Resource: "compositeresourcedefinitions"}
+var compositeresourcedefinitionsResource = schema.GroupVersionResource{Group: "apiextensions.ibm.crossplane.io", Version: "v1", Resource: "compositeresourcedefinitions"}
 
-var compositeresourcedefinitionsKind = schema.GroupVersionKind{Group: "apiextensions.crossplane.io", Version: "v1", Kind: "CompositeResourceDefinition"}
+var compositeresourcedefinitionsKind = schema.GroupVersionKind{Group: "apiextensions.ibm.crossplane.io", Version: "v1", Kind: "CompositeResourceDefinition"}
 
 // Get takes name of the compositeResourceDefinition, and returns the corresponding compositeResourceDefinition object, and an error if there is any.
 func (c *FakeCompositeResourceDefinitions) Get(ctx context.Context, name string, options v1.GetOptions) (result *apiextensionsv1.CompositeResourceDefinition, err error) {

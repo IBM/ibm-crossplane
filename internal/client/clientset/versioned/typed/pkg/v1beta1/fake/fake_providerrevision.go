@@ -35,9 +35,9 @@ type FakeProviderRevisions struct {
 	Fake *FakePkgV1beta1
 }
 
-var providerrevisionsResource = schema.GroupVersionResource{Group: "pkg.crossplane.io", Version: "v1beta1", Resource: "providerrevisions"}
+var providerrevisionsResource = schema.GroupVersionResource{Group: "pkg.ibm.crossplane.io", Version: "v1beta1", Resource: "providerrevisions"}
 
-var providerrevisionsKind = schema.GroupVersionKind{Group: "pkg.crossplane.io", Version: "v1beta1", Kind: "ProviderRevision"}
+var providerrevisionsKind = schema.GroupVersionKind{Group: "pkg.ibm.crossplane.io", Version: "v1beta1", Kind: "ProviderRevision"}
 
 // Get takes name of the providerRevision, and returns the corresponding providerRevision object, and an error if there is any.
 func (c *FakeProviderRevisions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ProviderRevision, err error) {

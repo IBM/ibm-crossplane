@@ -32,7 +32,7 @@ type PkgV1beta1Interface interface {
 	ProviderRevisionsGetter
 }
 
-// PkgV1beta1Client is used to interact with features provided by the pkg.crossplane.io group.
+// PkgV1beta1Client is used to interact with features provided by the pkg.ibm.crossplane.io group.
 type PkgV1beta1Client struct {
 	restClient rest.Interface
 }

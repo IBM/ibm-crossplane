@@ -335,7 +335,7 @@ func (c *APIConfigurator) Configure(ctx context.Context, cp resource.Composite, 
 	}
 
 	// IBM Patch: Default connection secrets namespace to the same namespace where Crossplane is deployed
-	n := os.Getenv("POD_NAMESPACE")
+	n := os.Getenv("WATCH_NAMESPACE")
 	if comp.Spec.WriteConnectionSecretsToNamespace != nil {
 		n = *comp.Spec.WriteConnectionSecretsToNamespace
 	}
