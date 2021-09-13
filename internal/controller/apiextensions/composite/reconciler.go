@@ -460,7 +460,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	for i, cd := range cds {
-		if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
+		if err := r.client.Apply(ctx, cd); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
