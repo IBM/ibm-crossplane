@@ -446,24 +446,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		cds[i] = cd
 		refs[i] = *meta.ReferenceTo(cd, cd.GetObjectKind().GroupVersionKind())
+	}
 
-		// IBM Patch: This block has been moved in to the loop
-		// We persist references to our composed resources before we create them.
-		// This way we can render composed resources with non-deterministic names,
-		// and also potentially recover from any errors we encounter while applying
-		// composed resources without leaking them.
-		cr.SetResourceReferences(refs)
-		if err := r.client.Update(ctx, cr); err != nil {
-			log.Debug(errUpdate, "error", err)
-			r.record.Event(cr, event.Warning(reasonCompose, err))
-			return reconcile.Result{RequeueAfter: shortWait}, nil
-		}
+	// We persist references to our composed resources before we create them.
+	// This way we can render composed resources with non-deterministic names,
+	// and also potentially recover from any errors we encounter while applying
+	// composed resources without leaking them.
+	cr.SetResourceReferences(refs)
+	if err := r.client.Update(ctx, cr); err != nil {
+		log.Debug(errUpdate, "error", err)
+		r.record.Event(cr, event.Warning(reasonCompose, err))
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
 
-		// IBM Patch: Apply the managed resource
-		// We apply all of our composed resources before we observe them and update
-		// the composite resource accordingly in the loop below. This ensures that
-		// issues observing and processing one composed resource won't block the
-		// application of another.
+	for i, cd := range cds {
 		if err := r.client.Apply(ctx, cd, resource.MustBeControllableBy(cr.GetUID())); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
