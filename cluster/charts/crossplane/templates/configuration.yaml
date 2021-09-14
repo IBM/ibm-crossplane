@@ -1,6 +1,6 @@
 {{- range $.Values.configuration.packages }}
 {{ if ne . "" }}
-apiVersion: pkg.crossplane.io/v1
+apiVersion: pkg.ibm.crossplane.io/v1
 kind: Configuration
 metadata:
   name: {{ regexReplaceAll "(:|@).*" . "" | trim | replace "/" "-" }}

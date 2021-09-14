@@ -460,6 +460,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	for i, cd := range cds {
+		// IBM Patch: Do not require that cd is controlled by cr
 		if err := r.client.Apply(ctx, cd); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
