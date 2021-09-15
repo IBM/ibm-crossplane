@@ -24,9 +24,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/utils/pointer"
 
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/resource/fake"
 	"github.com/crossplane/crossplane-runtime/pkg/test"
 )
@@ -477,10 +477,17 @@ func TestPatchApply(t *testing.T) {
 		Time: &now,
 	}
 
+	errNotFound := func(path string) error {
+		p := &fieldpath.Paved{}
+		_, err := p.GetValue(path)
+		return err
+	}
+
 	type args struct {
 		patch Patch
 		cp    *fake.Composite
 		cd    *fake.Composed
+		only  []PatchType
 	}
 	type want struct {
 		cp  *fake.Composite
@@ -494,7 +501,7 @@ func TestPatchApply(t *testing.T) {
 		want
 	}{
 		"InvalidCompositeFieldPathPatch": {
-			reason: "Should return error when required fields not passed to applyFromCompositeFieldPatch",
+			reason: "Should return error when required fields not passed to applyFromFieldPathPatch",
 			args: args{
 				patch: Patch{
 					Type: PatchTypeFromCompositeFieldPath,
@@ -546,9 +553,133 @@ func TestPatchApply(t *testing.T) {
 			},
 			want: want{
 				cd: &fake.Composed{
-					ObjectMeta: metav1.ObjectMeta{Name: "cd", Labels: map[string]string{
-						"Test": "blah",
-					}},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+						Labels: map[string]string{
+							"Test": "blah",
+						},
+					},
+				},
+				err: nil,
+			},
+		},
+		"MissingOptionalFieldPath": {
+			reason: "A FromFieldPath patch should be a no-op when an optional fromFieldPath doesn't exist",
+			args: args{
+				patch: Patch{
+					Type:          PatchTypeFromCompositeFieldPath,
+					FromFieldPath: pointer.StringPtr("objectMeta.labels"),
+					ToFieldPath:   pointer.StringPtr("objectMeta.labels"),
+				},
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp",
+					},
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{Name: "cd"},
+				},
+			},
+			want: want{
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+					},
+				},
+				err: nil,
+			},
+		},
+		"MissingRequiredFieldPath": {
+			reason: "A FromFieldPath patch should return an error when a required fromFieldPath doesn't exist",
+			args: args{
+				patch: Patch{
+					Type:          PatchTypeFromCompositeFieldPath,
+					FromFieldPath: pointer.StringPtr("wat"),
+					Policy: &PatchPolicy{
+						FromFieldPath: func() *FromFieldPathPolicy {
+							s := FromFieldPathPolicyRequired
+							return &s
+						}(),
+					},
+					ToFieldPath: pointer.StringPtr("wat"),
+				},
+				cp: &fake.Composite{
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{Name: "cd"},
+				},
+			},
+			want: want{
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+					},
+				},
+				err: errNotFound("wat"),
+			},
+		},
+		"FilterExcludeCompositeFieldPathPatch": {
+			reason: "Should not apply the patch as the PatchType is not present in filter.",
+			args: args{
+				patch: Patch{
+					Type:          PatchTypeFromCompositeFieldPath,
+					FromFieldPath: pointer.StringPtr("objectMeta.labels"),
+					ToFieldPath:   pointer.StringPtr("objectMeta.labels"),
+				},
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp",
+						Labels: map[string]string{
+							"Test": "blah",
+						},
+					},
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{Name: "cd"},
+				},
+				only: []PatchType{PatchTypePatchSet},
+			},
+			want: want{
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+					},
+				},
+				err: nil,
+			},
+		},
+		"FilterIncludeCompositeFieldPathPatch": {
+			reason: "Should apply the patch as the PatchType is present in filter.",
+			args: args{
+				patch: Patch{
+					Type:          PatchTypeFromCompositeFieldPath,
+					FromFieldPath: pointer.StringPtr("objectMeta.labels"),
+					ToFieldPath:   pointer.StringPtr("objectMeta.labels"),
+				},
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp",
+						Labels: map[string]string{
+							"Test": "blah",
+						},
+					},
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{Name: "cd"},
+				},
+				only: []PatchType{PatchTypeFromCompositeFieldPath},
+			},
+			want: want{
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+						Labels: map[string]string{
+							"Test": "blah",
+						}},
 				},
 				err: nil,
 			},
@@ -570,14 +701,70 @@ func TestPatchApply(t *testing.T) {
 					ConnectionDetailsLastPublishedTimer: lpt,
 				},
 				cd: &fake.Composed{
-					ObjectMeta: metav1.ObjectMeta{Name: "cd"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+					},
 				},
 			},
 			want: want{
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp",
+						Labels: map[string]string{
+							"Test": "blah",
+						},
+					},
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
 				cd: &fake.Composed{
-					ObjectMeta: metav1.ObjectMeta{Name: "cd", Labels: map[string]string{
-						"Test": "blah",
-					}},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+						Labels: map[string]string{
+							"Test": "blah",
+						}},
+				},
+				err: nil,
+			},
+		},
+		"ValidToCompositeFieldPathPatch": {
+			reason: "Should correctly apply a ToCompositeFieldPath patch with valid settings",
+			args: args{
+				patch: Patch{
+					Type:          PatchTypeToCompositeFieldPath,
+					FromFieldPath: pointer.StringPtr("objectMeta.labels"),
+					ToFieldPath:   pointer.StringPtr("objectMeta.labels"),
+				},
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp",
+					},
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+						Labels: map[string]string{
+							"Test": "blah",
+						},
+					},
+				},
+			},
+			want: want{
+				cp: &fake.Composite{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp",
+						Labels: map[string]string{
+							"Test": "blah",
+						},
+					},
+					ConnectionDetailsLastPublishedTimer: lpt,
+				},
+				cd: &fake.Composed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cd",
+						Labels: map[string]string{
+							"Test": "blah",
+						}},
 				},
 				err: nil,
 			},
@@ -586,7 +773,7 @@ func TestPatchApply(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			ncp := tc.args.cp.DeepCopyObject()
-			err := tc.args.patch.Apply(ncp, tc.args.cd)
+			err := tc.args.patch.Apply(ncp, tc.args.cd, tc.args.only...)
 
 			if tc.want.cp != nil {
 				if diff := cmp.Diff(tc.want.cp, ncp); diff != "" {
@@ -600,6 +787,105 @@ func TestPatchApply(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.want.err, err, test.EquateErrors()); diff != "" {
 				t.Errorf("\n%s\nApply(err): -want, +got:\n%s", tc.reason, diff)
+			}
+		})
+	}
+}
+
+func TestFieldNotFoundNoop(t *testing.T) {
+	errBoom := errors.New("boom")
+	errNotFound := func() error {
+		p := &fieldpath.Paved{}
+		_, err := p.GetValue("boom")
+		return err
+	}
+	required := FromFieldPathPolicyRequired
+	optional := FromFieldPathPolicyOptional
+	type args struct {
+		err error
+		p   *PatchPolicy
+	}
+	type want struct {
+		noop bool
+		err  error
+	}
+
+	cases := map[string]struct {
+		reason string
+		args
+		want
+	}{
+		"NotAnError": {
+			reason: "Should perform patch if no error finding field.",
+			args:   args{},
+			want: want{
+				noop: false,
+			},
+		},
+		"NotFieldNotFoundError": {
+			reason: "Should return error if something other than field not found.",
+			args: args{
+				err: errBoom,
+			},
+			want: want{
+				noop: false,
+				err:  errBoom,
+			},
+		},
+		"DefaultOptionalNoPolicy": {
+			reason: "Should return no-op if field not found and no patch policy specified.",
+			args: args{
+				err: errNotFound(),
+			},
+			want: want{
+				noop: true,
+			},
+		},
+		"DefaultOptionalNoPathPolicy": {
+			reason: "Should return no-op if field not found and empty patch policy specified.",
+			args: args{
+				p:   &PatchPolicy{},
+				err: errNotFound(),
+			},
+			want: want{
+				noop: true,
+			},
+		},
+		"OptionalNotFound": {
+			reason: "Should return no-op if field not found and optional patch policy explicitly specified.",
+			args: args{
+				p: &PatchPolicy{
+					FromFieldPath: &optional,
+				},
+				err: errNotFound(),
+			},
+			want: want{
+				noop: true,
+			},
+		},
+		"RequiredNotFound": {
+			reason: "Should return error if field not found and required patch policy explicitly specified.",
+			args: args{
+				p: &PatchPolicy{
+					FromFieldPath: &required,
+				},
+				err: errNotFound(),
+			},
+			want: want{
+				noop: false,
+				err:  errNotFound(),
+			},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := FieldNotFoundNoop(tc.args.err, tc.args.p)
+
+			if diff := cmp.Diff(tc.want.noop, got); diff != "" {
+				t.Errorf("Resolve(b): -want, +got:\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.want.err, err, test.EquateErrors()); diff != "" {
+				t.Errorf("Resolve(b): -want, +got:\n%s", diff)
 			}
 		})
 	}

@@ -13,6 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+//
+// Copyright 2021 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package offered
 
@@ -26,9 +41,9 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	kcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -137,7 +152,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								d := o.(*v1.CompositeResourceDefinition)
 								d.SetDeletionTimestamp(&now)
 								return nil
@@ -161,7 +176,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								switch v := o.(type) {
 								case *v1.CompositeResourceDefinition:
 									d := v1.CompositeResourceDefinition{}
@@ -191,7 +206,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								if v, ok := o.(*v1.CompositeResourceDefinition); ok {
 									d := v1.CompositeResourceDefinition{}
 									d.SetDeletionTimestamp(&now)
@@ -221,7 +236,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								if v, ok := o.(*v1.CompositeResourceDefinition); ok {
 									d := v1.CompositeResourceDefinition{}
 									d.SetDeletionTimestamp(&now)
@@ -251,7 +266,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								switch v := o.(type) {
 								case *v1.CompositeResourceDefinition:
 									d := v1.CompositeResourceDefinition{}
@@ -286,7 +301,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								switch v := o.(type) {
 								case *v1.CompositeResourceDefinition:
 									d := v1.CompositeResourceDefinition{}
@@ -301,7 +316,7 @@ func TestReconcile(t *testing.T) {
 								}
 								return nil
 							}),
-							MockList: test.NewMockListFn(nil, func(o runtime.Object) error {
+							MockList: test.NewMockListFn(nil, func(o client.ObjectList) error {
 								v := o.(*unstructured.UnstructuredList)
 								*v = unstructured.UnstructuredList{
 									Items: []unstructured.Unstructured{{}, {}},
@@ -328,7 +343,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								switch v := o.(type) {
 								case *v1.CompositeResourceDefinition:
 									d := v1.CompositeResourceDefinition{}
@@ -343,7 +358,7 @@ func TestReconcile(t *testing.T) {
 								}
 								return nil
 							}),
-							MockList: test.NewMockListFn(nil, func(o runtime.Object) error {
+							MockList: test.NewMockListFn(nil, func(o client.ObjectList) error {
 								v := o.(*unstructured.UnstructuredList)
 								*v = unstructured.UnstructuredList{
 									Items: []unstructured.Unstructured{{}, {}},
@@ -370,7 +385,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								switch v := o.(type) {
 								case *v1.CompositeResourceDefinition:
 									d := v1.CompositeResourceDefinition{
@@ -408,7 +423,7 @@ func TestReconcile(t *testing.T) {
 				opts: []ReconcilerOption{
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								switch v := o.(type) {
 								case *v1.CompositeResourceDefinition:
 									d := v1.CompositeResourceDefinition{}
@@ -425,7 +440,7 @@ func TestReconcile(t *testing.T) {
 							}),
 							MockList:   test.NewMockListFn(nil),
 							MockDelete: test.NewMockDeleteFn(nil),
-							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(got runtime.Object) error {
+							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(got client.Object) error {
 								want := &v1.CompositeResourceDefinition{}
 								want.SetUID(owner)
 								want.SetDeletionTimestamp(&now)
@@ -470,6 +485,8 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
+		// IBM Patch: Reduce cluster permission
+		// Removed test "ApplyCRDError" - IBM-patched reconciler does not apply CRDs
 		"CustomResourceDefinitionIsNotEstablished": {
 			reason: "We should requeue after a tiny wait if we're waiting for a newly created CRD to become established.",
 			args: args{
@@ -479,7 +496,7 @@ func TestReconcile(t *testing.T) {
 						Client: &test.MockClient{
 							MockGet: test.NewMockGetFn(nil),
 						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
+						Applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error {
 							return nil
 						}),
 					}),
@@ -495,39 +512,6 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: tinyWait},
 			},
 		},
-		"GetEstablishedCustomResourceDefinitionError": {
-			reason: "We should requeue after a short wait if we encounter an error getting a CRD.",
-			args: args{
-				mgr: &fake.Manager{},
-				opts: []ReconcilerOption{
-					WithClientApplicator(resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
-								switch v := o.(type) {
-								case *v1.CompositeResourceDefinition:
-									d := v1.CompositeResourceDefinition{}
-									d.SetDeletionTimestamp(nil)
-									*v = d
-								case *extv1.CustomResourceDefinition:
-									return errBoom
-								}
-								return nil
-							}),
-							MockStatusUpdate: test.NewMockStatusUpdateFn(nil),
-						},
-					}),
-					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
-						return &extv1.CustomResourceDefinition{}, nil
-					})),
-					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
-						return nil
-					}}),
-				},
-			},
-			want: want{
-				r: reconcile.Result{RequeueAfter: shortWait},
-			},
-		},
 		"StartControllerError": {
 			reason: "We should requeue after a short wait if we encounter an error while starting our controller.",
 			args: args{
@@ -537,7 +521,7 @@ func TestReconcile(t *testing.T) {
 						Client: &test.MockClient{
 							MockGet: test.NewMockGetFn(nil),
 						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
+						Applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error {
 							return nil
 						}),
 					}),
@@ -571,7 +555,7 @@ func TestReconcile(t *testing.T) {
 					WithClientApplicator(resource.ClientApplicator{
 						Client: &test.MockClient{
 							MockGet: test.NewMockGetFn(nil),
-							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(o runtime.Object) error {
+							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(o client.Object) error {
 								want := &v1.CompositeResourceDefinition{}
 								want.Status.SetConditions(v1.WatchingClaim())
 
@@ -581,7 +565,7 @@ func TestReconcile(t *testing.T) {
 								return nil
 							}),
 						},
-						Applicator: resource.ApplyFn(func(_ context.Context, _ runtime.Object, _ ...resource.ApplyOption) error {
+						Applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error {
 							return nil
 						}),
 					}),
@@ -607,12 +591,78 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{Requeue: false},
 			},
 		},
+		"SuccessfulUpdateControllerVersion": {
+			reason: "We should not requeue after a short wait if we successfully ensured our CRD exists, the old controller stopped, and the new one started.",
+			args: args{
+				mgr: &fake.Manager{},
+				opts: []ReconcilerOption{
+					WithClientApplicator(resource.ClientApplicator{
+						Client: &test.MockClient{
+							MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
+								// IBM Patch: Reduce cluster permission
+								// Add case for CustomResourceDefinition to prevent panic
+								switch d := obj.(type) {
+								case *v1.CompositeResourceDefinition:
+									d.Spec.ClaimNames = &extv1.CustomResourceDefinitionNames{}
+									d.Spec.Versions = []v1.CompositeResourceDefinitionVersion{
+										{Name: "old", Referenceable: false},
+										{Name: "new", Referenceable: true},
+									}
+									d.Status.Controllers.CompositeResourceClaimTypeRef = v1.TypeReference{APIVersion: "old"}
+								case *extv1.CustomResourceDefinition:
+								}
+								// IBM Patch end: Reduce cluster permission
+								return nil
+							}),
+							MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(o client.Object) error {
+								want := &v1.CompositeResourceDefinition{}
+								want.Spec.ClaimNames = &extv1.CustomResourceDefinitionNames{}
+								want.Spec.Versions = []v1.CompositeResourceDefinitionVersion{
+									{Name: "old", Referenceable: false},
+									{Name: "new", Referenceable: true},
+								}
+								want.Status.Controllers.CompositeResourceClaimTypeRef = v1.TypeReference{APIVersion: "new"}
+								want.Status.SetConditions(v1.WatchingClaim())
+
+								if diff := cmp.Diff(want, o); diff != "" {
+									t.Errorf("-want, +got:\n%s", diff)
+								}
+								return nil
+							}),
+						},
+						Applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error {
+							return nil
+						}),
+					}),
+					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
+						return &extv1.CustomResourceDefinition{
+							Status: extv1.CustomResourceDefinitionStatus{
+								Conditions: []extv1.CustomResourceDefinitionCondition{
+									{Type: extv1.Established, Status: extv1.ConditionTrue},
+								},
+							},
+						}, nil
+					})),
+					WithFinalizer(resource.FinalizerFns{AddFinalizerFn: func(_ context.Context, _ resource.Object) error {
+						return nil
+					}}),
+					WithControllerEngine(&MockEngine{
+						MockErr:   func(name string) error { return nil },
+						MockStart: func(_ string, _ kcontroller.Options, _ ...controller.Watch) error { return nil },
+						MockStop:  func(_ string) {},
+					}),
+				},
+			},
+			want: want{
+				r: reconcile.Result{Requeue: false},
+			},
+		},
 	}
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			r := NewReconciler(tc.args.mgr, tc.args.opts...)
-			got, err := r.Reconcile(reconcile.Request{})
+			got, err := r.Reconcile(context.Background(), reconcile.Request{})
 
 			if diff := cmp.Diff(tc.want.err, err, test.EquateErrors()); diff != "" {
 				t.Errorf("\n%s\nr.Reconcile(...): -want error, +got error:\n%s", tc.reason, diff)

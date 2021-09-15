@@ -3,14 +3,21 @@ replicas: 1
 deploymentStrategy: RollingUpdate
 
 image:
-  repository: crossplane/crossplane
+  repository: hyc-cloud-private-scratch-docker-local.artifactory.swg-devops.com/ibmcom/crossplane
   tag: %%VERSION%%
   pullPolicy: Always
+
+nodeSelector: {}
+tolerations: {}
+affinity: {}
 
 leaderElection: true
 args: {}
 
 provider:
+  packages: []
+
+configuration:
   packages: []
 
 imagePullSecrets:
@@ -22,6 +29,9 @@ rbacManager:
   managementPolicy: All
   leaderElection: true
   args: {}
+  nodeSelector: {}
+  tolerations: {}
+  affinity: {}
 
 priorityClassName: ""
 

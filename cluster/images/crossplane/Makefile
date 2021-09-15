@@ -1,7 +1,7 @@
 # ====================================================================================
 # Setup Project
 
-PLATFORMS := linux_amd64 linux_arm64
+PLATFORMS := linux_amd64 linux_arm64 linux_arm
 include ../../../build/makelib/common.mk
 
 # ====================================================================================
@@ -22,6 +22,7 @@ img.build:
 	@cp $(OUTPUT_DIR)/bin/$(OS)_$(ARCH)/crossplane $(IMAGE_TEMP_DIR) || $(FAIL)
 	@cd $(IMAGE_TEMP_DIR) && $(SED_CMD) 's|BASEIMAGE|$(OSBASEIMAGE)|g' Dockerfile || $(FAIL)
 	@docker build $(BUILD_ARGS) \
+		--platform linux/$(ARCH) \
 		-t $(IMAGE) \
 		$(IMAGE_TEMP_DIR) || $(FAIL)
 	@$(OK) docker build $(IMAGE)

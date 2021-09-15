@@ -15,6 +15,9 @@ kind of managed resource to a Crossplane Provider.
 > You can watch [TBS Episode 18] to follow along the live implementation of GCP PubSub
 managed resource.
 
+> If you plan to implement a managed resource for AWS, please see the
+[code generation guide].
+
 ## What Makes a Crossplane Infrastructure Resource
 
 Crossplane builds atop Kubernetes's powerful architecture in which declarative
@@ -609,7 +612,7 @@ feedback you may have about the development process!
 
 [TBS Episode 18]: https://www.youtube.com/watch?v=rvQ8N0u3rkE&t=7s
 [What Makes a Crossplane Infrastructure Resource]: #what-makes-a-crossplane-infrastructure-resource
-[managed resource]: ../introduction/managed-resources.md
+[managed resource]: ../concepts/managed-resources.md
 [`CloudMemorystoreInstance`]: https://github.com/crossplane/provider-gcp/blob/85a6ed3c669a021f1d61be51b2cbe2714b0bc70b/apis/cache/v1beta1/cloudmemorystore_instance_types.go#L184
 [`ProviderConfig`]: https://github.com/crossplane/provider-gcp/blob/be5aaf6/apis/v1beta1/providerconfig_types.go#L39
 [watching the API server]: https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes
@@ -642,3 +645,4 @@ feedback you may have about the development process!
 [Managed Resource API Patterns]: ../design/one-pager-managed-resource-api-design.md
 [Crossplane CLI]: https://github.com/crossplane/crossplane-cli#quick-start-stacks
 [`angryjet` documentation]: https://github.com/crossplane/crossplane-tools/blob/master/README.md
+[code generation guide]: https://github.com/crossplane/provider-aws/blob/master/CODE_GENERATION.md
