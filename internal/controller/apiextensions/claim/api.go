@@ -17,10 +17,10 @@ limitations under the License.
 package claim
 
 import (
-	"context"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"context"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
@@ -180,7 +180,6 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		Namespace: from.GetWriteConnectionSecretToReference().Namespace,
 		Name:      from.GetWriteConnectionSecretToReference().Name,
 	}
-	fs := &corev1.Secret{}
 
 	// IBM Patch: Remove cluster permission for Secrets
 	// - replace a.client.Get() with newly created client
@@ -192,7 +191,7 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		return false, errors.Wrap(err, errCreateClient)
 	}
 	clientset := kubernetes.NewForConfigOrDie(config)
-	fs, err = clientset.CoreV1().Secrets(n.Namespace).Get(context.TODO(), n.Name, metav1.GetOptions{})
+	fs, err := clientset.CoreV1().Secrets(n.Namespace).Get(context.TODO(), n.Name, metav1.GetOptions{})
 	// IBM Patch end
 
 	if err != nil {
@@ -222,6 +221,5 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		return true, nil
 	}
 	return false, nil
-
 	// IBM Patch end
 }

@@ -33,12 +33,11 @@ limitations under the License.
 package composite
 
 import (
-	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"context"
 	"math/rand"
 	"os"
 	"time"
@@ -65,13 +64,13 @@ import (
 const (
 	errApplySecret  = "cannot apply connection secret"
 	errCreateSecret = "cannot create connection secret"
+	errCreateClient	= "cannot create go client"
 
 	errNoCompatibleComposition  = "no compatible composition has been found"
 	errListCompositions         = "cannot list compositions"
 	errUpdateComposite          = "cannot update composite resource"
 	errCompositionNotCompatible = "referenced composition is not compatible with this composite resource"
 	errGetXRD                   = "cannot get composite resource definition"
-	errCreateClient			 	= "cannot create go client"
 )
 
 // Event reasons.
@@ -135,8 +134,7 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 		return true, nil
 	}
 	return false, nil
-
-
+	// IBM Patch end
 }
 
 // UnpublishConnection is no-op since PublishConnection only creates resources
