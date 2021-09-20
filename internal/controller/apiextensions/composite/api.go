@@ -34,6 +34,11 @@ package composite
 
 import (
 	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
 	"math/rand"
 	"os"
 	"time"
@@ -42,11 +47,8 @@ import (
 
 	configv1 "github.com/crossplane/crossplane/apis/pkg/v1"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
@@ -61,13 +63,15 @@ import (
 
 // Error strings.
 const (
-	errApplySecret = "cannot apply connection secret"
+	errApplySecret  = "cannot apply connection secret"
+	errCreateSecret = "cannot create connection secret"
 
 	errNoCompatibleComposition  = "no compatible composition has been found"
 	errListCompositions         = "cannot list compositions"
 	errUpdateComposite          = "cannot update composite resource"
 	errCompositionNotCompatible = "referenced composition is not compatible with this composite resource"
 	errGetXRD                   = "cannot get composite resource definition"
+	errCreateClient			 	= "cannot create go client"
 )
 
 // Event reasons.
@@ -108,23 +112,31 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 		}
 	}
 
-	err := a.client.Apply(ctx, s,
-		resource.ConnectionSecretMustBeControllableBy(o.GetUID()),
-		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
-			// We consider the update to be a no-op and don't allow it if the
-			// current and existing secret data are identical.
-			return !cmp.Equal(current.(*corev1.Secret).Data, desired.(*corev1.Secret).Data, cmpopts.EquateEmpty())
-		}),
-	)
-	if resource.IsNotAllowed(err) {
-		// The update was not allowed because it was a no-op.
-		return false, nil
-	}
+	// IBM Patch: Remove cluster permission for Secrets
+	// - replace a.client.Get() with newly created client
+	//   to avoid using informers underneath (they had cluster scope)
+	// - replace a.client.Apply() with .Get() and .Create() for newly created client
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
+	config, err := kubeconfig.ClientConfig()
 	if err != nil {
-		return false, errors.Wrap(err, errApplySecret)
+		return false, errors.Wrap(err, errCreateClient)
 	}
+	clientset := kubernetes.NewForConfigOrDie(config)
 
-	return true, nil
+	if _, err := clientset.CoreV1().Secrets(s.Namespace).Get(context.TODO(), s.Name, metav1.GetOptions{}); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return false, errors.Wrap(err, errGetSecret)
+		}
+		_, err := clientset.CoreV1().Secrets(s.ObjectMeta.Namespace).Create(context.TODO(), s, metav1.CreateOptions{})
+		if err != nil {
+			return false, errors.Wrap(err, errCreateSecret)
+		}
+		return true, nil
+	}
+	return false, nil
+
+
 }
 
 // UnpublishConnection is no-op since PublishConnection only creates resources

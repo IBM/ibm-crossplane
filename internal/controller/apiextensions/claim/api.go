@@ -18,6 +18,8 @@ package claim
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -43,6 +45,7 @@ const (
 	errGetSecret             = "cannot get composite resource's connection secret"
 	errSecretConflict        = "cannot establish control of existing connection secret"
 	errCreateOrUpdateSecret  = "cannot create or update connection secret"
+	errCreateClient			 = "cannot create go client"
 )
 
 // An APIBinder binds claims to composites by updating them in a Kubernetes API
@@ -178,7 +181,21 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		Name:      from.GetWriteConnectionSecretToReference().Name,
 	}
 	fs := &corev1.Secret{}
-	if err := a.client.Get(ctx, n, fs); err != nil {
+
+	// IBM Patch: Remove cluster permission for Secrets
+	// - replace a.client.Get() with newly created client
+	//   to avoid using informers underneath (they had cluster scope)
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
+	config, err := kubeconfig.ClientConfig()
+	if err != nil {
+		return false, errors.Wrap(err, errCreateClient)
+	}
+	clientset := kubernetes.NewForConfigOrDie(config)
+	fs, err = clientset.CoreV1().Secrets(n.Namespace).Get(context.TODO(), n.Name, metav1.GetOptions{})
+	// IBM Patch end
+
+	if err != nil {
 		return false, errors.Wrap(err, errGetSecret)
 	}
 
@@ -192,21 +209,19 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	ts := resource.LocalConnectionSecretFor(to, resource.MustGetKind(to, a.typer))
 	ts.Data = fs.Data
 
-	err := a.client.Apply(ctx, ts,
-		resource.ConnectionSecretMustBeControllableBy(to.GetUID()),
-		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
-			// We consider the update to be a no-op and don't allow it if the
-			// current and existing secret data are identical.
-			return !cmp.Equal(current.(*corev1.Secret).Data, desired.(*corev1.Secret).Data, cmpopts.EquateEmpty())
-		}),
-	)
-	if resource.IsNotAllowed(err) {
-		// The update was not allowed because it was a no-op.
-		return false, nil
+	// IBM Patch: Remove cluster permission for Secrets
+	// - replace a.client.Apply() with .Get() and .Create() for newly created client
+	if _, err := clientset.CoreV1().Secrets(ts.Namespace).Get(context.TODO(), ts.Name, metav1.GetOptions{}); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return false, errors.Wrap(err, errGetSecret)
+		}
+		_, err := clientset.CoreV1().Secrets(ts.ObjectMeta.Namespace).Create(context.TODO(), ts, metav1.CreateOptions{})
+		if err != nil {
+			return false, errors.Wrap(err, errCreateOrUpdateSecret)
+		}
+		return true, nil
 	}
-	if err != nil {
-		return false, errors.Wrap(err, errCreateOrUpdateSecret)
-	}
+	return false, nil
 
-	return true, nil
+	// IBM Patch end
 }
