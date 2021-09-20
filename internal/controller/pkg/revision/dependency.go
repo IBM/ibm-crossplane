@@ -19,6 +19,8 @@ package revision
 import (
 	"context"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/Masterminds/semver"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
@@ -37,7 +39,7 @@ const (
 	lockName = "lock"
 
 	errNotMeta                   = "meta type is not a valid package"
-	errGetLock                   = "cannot get lock"
+	errGetOrCreateLock           = "cannot get or create lock"
 	errIncompatibleDependencyFmt = "incompatible dependencies: %+v"
 	errMissingDependenciesFmt    = "missing dependencies: %+v"
 	errDependencyNotInGraph      = "dependency is not present in graph"
@@ -92,8 +94,18 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 
 	// Get the lock.
 	lock := &v1alpha1.Lock{}
-	if err := m.client.Get(ctx, types.NamespacedName{Name: lockName}, lock); err != nil {
-		return found, installed, invalid, errors.Wrap(err, errGetLock)
+	err = m.client.Get(ctx, types.NamespacedName{Name: lockName}, lock)
+	if kerrors.IsNotFound(err) {
+		// If lock does not exist and we are inactive then we can return early
+		// because our only operation would be to remove self.
+		if pr.GetDesiredState() == v1.PackageRevisionInactive {
+			return found, installed, invalid, nil
+		}
+		lock.Name = lockName
+		err = m.client.Create(ctx, lock, &client.CreateOptions{})
+	}
+	if err != nil {
+		return found, installed, invalid, errors.Wrap(err, errGetOrCreateLock)
 	}
 
 	prRef, err := name.ParseReference(pr.GetSource(), name.WithDefaultRegistry(""))
@@ -210,7 +222,12 @@ func (m *PackageDependencyManager) RemoveSelf(ctx context.Context, pr v1.Package
 
 	// Get the lock.
 	lock := &v1alpha1.Lock{}
-	if err := m.client.Get(ctx, types.NamespacedName{Name: lockName}, lock); err != nil {
+	err = m.client.Get(ctx, types.NamespacedName{Name: lockName}, lock)
+	if kerrors.IsNotFound(err) {
+		// If lock does not exist then we don't need to remove self.
+		return nil
+	}
+	if err != nil {
 		return err
 	}
 
