@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"context"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
@@ -45,7 +46,7 @@ const (
 	errGetSecret             = "cannot get composite resource's connection secret"
 	errSecretConflict        = "cannot establish control of existing connection secret"
 	errCreateOrUpdateSecret  = "cannot create or update connection secret"
-	errCreateClient			 = "cannot create go client"
+	errCreateClient          = "cannot create go client"
 )
 
 // An APIBinder binds claims to composites by updating them in a Kubernetes API

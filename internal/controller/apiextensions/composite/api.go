@@ -64,7 +64,7 @@ import (
 const (
 	errApplySecret  = "cannot apply connection secret"
 	errCreateSecret = "cannot create connection secret"
-	errCreateClient	= "cannot create go client"
+	errCreateClient = "cannot create go client"
 
 	errNoCompatibleComposition  = "no compatible composition has been found"
 	errListCompositions         = "cannot list compositions"
