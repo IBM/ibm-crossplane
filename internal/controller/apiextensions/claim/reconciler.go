@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	clientset "k8s.io/client-go/kubernetes"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -143,10 +145,10 @@ type crComposite struct {
 	ConnectionPropagator
 }
 
-func defaultCRComposite(c client.Client, t runtime.ObjectTyper) crComposite {
+func defaultCRComposite(c client.Client, cfs *clientset.Clientset, t runtime.ObjectTyper) crComposite {
 	return crComposite{
 		Configurator:         ConfiguratorFn(ConfigureComposite),
-		ConnectionPropagator: NewAPIConnectionPropagator(c, t),
+		ConnectionPropagator: NewAPIConnectionPropagator(c, cfs, t),
 	}
 }
 
@@ -234,7 +236,7 @@ func WithRecorder(er event.Recorder) ReconcilerOption {
 // The returned Reconciler will apply only the ObjectMetaConfigurator by
 // default; most callers should supply one or more CompositeConfigurators to
 // configure their composite resources.
-func NewReconciler(m manager.Manager, of resource.CompositeClaimKind, with resource.CompositeKind, o ...ReconcilerOption) *Reconciler {
+func NewReconciler(m manager.Manager, cfs *clientset.Clientset, of resource.CompositeClaimKind, with resource.CompositeKind, o ...ReconcilerOption) *Reconciler {
 	c := unstructured.NewClient(m.GetClient())
 	r := &Reconciler{
 		client: resource.ClientApplicator{
@@ -247,7 +249,7 @@ func NewReconciler(m manager.Manager, of resource.CompositeClaimKind, with resou
 		newComposite: func() resource.Composite {
 			return composite.New(composite.WithGroupVersionKind(schema.GroupVersionKind(with)))
 		},
-		composite: defaultCRComposite(c, m.GetScheme()),
+		composite: defaultCRComposite(c, cfs, m.GetScheme()),
 		claim:     defaultCRClaim(c, m.GetScheme()),
 		log:       logging.NewNopLogger(),
 		record:    event.NewNopRecorder(),

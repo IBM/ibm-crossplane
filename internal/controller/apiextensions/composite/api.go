@@ -34,6 +34,9 @@ package composite
 
 import (
 	"context"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientset "k8s.io/client-go/kubernetes"
 	"math/rand"
 	"os"
 	"time"
@@ -79,13 +82,18 @@ const (
 // it through a set of permitted keys.
 type APIFilteredSecretPublisher struct {
 	client resource.Applicator
+	clientForSecrets *clientset.Clientset
 	filter []string
 }
 
 // NewAPIFilteredSecretPublisher returns a ConnectionPublisher that only
 // publishes connection secret keys that are included in the supplied filter.
-func NewAPIFilteredSecretPublisher(c client.Client, filter []string) *APIFilteredSecretPublisher {
-	return &APIFilteredSecretPublisher{client: resource.NewAPIPatchingApplicator(c), filter: filter}
+func NewAPIFilteredSecretPublisher(c client.Client, cfs *clientset.Clientset, filter []string) *APIFilteredSecretPublisher {
+	return &APIFilteredSecretPublisher{
+		client: resource.NewAPIPatchingApplicator(c),
+		clientForSecrets: cfs,
+		filter: filter,
+	}
 }
 
 // PublishConnection publishes the supplied ConnectionDetails to the Secret
@@ -108,7 +116,7 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 		}
 	}
 
-	err := a.client.Apply(ctx, s,
+	err := applyForSecrets(ctx, a.clientForSecrets, s,
 		resource.ConnectionSecretMustBeControllableBy(o.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
 			// We consider the update to be a no-op and don't allow it if the
@@ -125,6 +133,38 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 	}
 
 	return true, nil
+}
+
+func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Secret, ao ...resource.ApplyOption) error {
+	m := o
+
+	if m.GetName() == "" && m.GetGenerateName() != "" {
+		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
+		return errors.Wrap(err, "cannot create object")
+	}
+
+	desired := o.DeepCopyObject()
+
+	//err := a.client.Get(ctx, types.NamespacedName{Name: m.GetName(), Namespace: m.GetNamespace()}, o)
+	o, err := cfs.CoreV1().Secrets(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		_, e := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
+		return errors.Wrap(e, "cannot create object")
+	}
+	if err != nil {
+		return errors.Wrap(err, "cannot get object")
+	}
+
+	for _, fn := range ao {
+		if err := fn(ctx, o, desired); err != nil {
+			return err
+		}
+	}
+
+	{
+		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Update(context.TODO(), m, metav1.UpdateOptions{})
+		return errors.Wrap(err, "cannot update object")
+	}
 }
 
 // UnpublishConnection is no-op since PublishConnection only creates resources

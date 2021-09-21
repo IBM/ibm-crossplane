@@ -33,6 +33,8 @@ package offered
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"strings"
 	"time"
 
@@ -379,7 +381,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
+	config, err := kubeconfig.ClientConfig()
+	if err != nil {
+		log.Debug("Cannot create clientset for secrets", "error", err)
+	}
+	cfs := kubernetes.NewForConfigOrDie(config)
+
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,
+		cfs,
 		resource.CompositeClaimKind(d.GetClaimGroupVersionKind()),
 		resource.CompositeKind(d.GetCompositeGroupVersionKind()),
 		claim.WithLogger(log.WithValues("controller", claim.ControllerName(d.GetName()))),

@@ -33,6 +33,8 @@ package definition
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"strings"
 	"time"
 
@@ -392,9 +394,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	recorder := r.record.WithAnnotations("controller", composite.ControllerName(d.GetName()))
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
+	config, err := kubeconfig.ClientConfig()
+	if err != nil {
+		log.Debug("Cannot create clientset for secrets", "error", err)
+	}
+	cfs := kubernetes.NewForConfigOrDie(config)
+
 	o := kcontroller.Options{Reconciler: composite.NewReconciler(r.mgr,
+		cfs,
 		resource.CompositeKind(d.GetCompositeGroupVersionKind()),
-		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.client, d.GetConnectionSecretKeys())),
+		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.client, cfs, d.GetConnectionSecretKeys())),
 		composite.WithCompositionSelector(composite.NewCompositionSelectorChain(
 			composite.NewEnforcedCompositionSelector(*d, recorder),
 			composite.NewAPIDefaultCompositionSelector(r.client, *meta.ReferenceTo(d, v1.CompositeResourceDefinitionGroupVersionKind), recorder),

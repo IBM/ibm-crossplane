@@ -34,6 +34,7 @@ package composite
 
 import (
 	"context"
+	clientset "k8s.io/client-go/kubernetes"
 	"time"
 
 	"github.com/pkg/errors"
@@ -300,7 +301,7 @@ type composedResource struct {
 }
 
 // NewReconciler returns a new Reconciler of composite resources.
-func NewReconciler(mgr manager.Manager, of resource.CompositeKind, opts ...ReconcilerOption) *Reconciler {
+func NewReconciler(mgr manager.Manager, cfs *clientset.Clientset, of resource.CompositeKind, opts ...ReconcilerOption) *Reconciler {
 	nc := func() resource.Composite {
 		return composite.New(composite.WithGroupVersionKind(schema.GroupVersionKind(of)))
 	}
@@ -324,7 +325,7 @@ func NewReconciler(mgr manager.Manager, of resource.CompositeKind, opts ...Recon
 		composite: compositeResource{
 			CompositionSelector: NewAPILabelSelectorResolver(kube),
 			Configurator:        NewConfiguratorChain(NewAPINamingConfigurator(kube), NewAPIConfigurator(kube)),
-			ConnectionPublisher: NewAPIFilteredSecretPublisher(kube, []string{}),
+			ConnectionPublisher: NewAPIFilteredSecretPublisher(kube, cfs, []string{}),
 			Renderer:            RendererFn(RenderComposite),
 		},
 

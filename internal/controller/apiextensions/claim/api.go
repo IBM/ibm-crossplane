@@ -18,6 +18,10 @@ package claim
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
+
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -25,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
@@ -154,14 +157,16 @@ func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeC
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.
 type APIConnectionPropagator struct {
-	client resource.ClientApplicator
+	client 				resource.ClientApplicator
+	clientForSecrets    *clientset.Clientset
 	typer  runtime.ObjectTyper
 }
 
 // NewAPIConnectionPropagator returns a new APIConnectionPropagator.
-func NewAPIConnectionPropagator(c client.Client, t runtime.ObjectTyper) *APIConnectionPropagator {
+func NewAPIConnectionPropagator(c client.Client, cfs *clientset.Clientset, t runtime.ObjectTyper) *APIConnectionPropagator {
 	return &APIConnectionPropagator{
 		client: resource.ClientApplicator{Client: c, Applicator: resource.NewAPIUpdatingApplicator(c)},
+		clientForSecrets: cfs,
 		typer:  t,
 	}
 }
@@ -178,8 +183,11 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		Name:      from.GetWriteConnectionSecretToReference().Name,
 	}
 	fs := &corev1.Secret{}
-	if err := a.client.Get(ctx, n, fs); err != nil {
-		return false, errors.Wrap(err, errGetSecret)
+
+	fs, errGet := a.clientForSecrets.CoreV1().Secrets(n.Namespace).Get(context.TODO(), n.Name, metav1.GetOptions{})
+
+	if errGet != nil {
+		return false, errors.Wrap(errGet, errGetSecret)
 	}
 
 	// Make sure 'from' is the controller of the connection secret it references
@@ -192,7 +200,7 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	ts := resource.LocalConnectionSecretFor(to, resource.MustGetKind(to, a.typer))
 	ts.Data = fs.Data
 
-	err := a.client.Apply(ctx, ts,
+	err := applyForSecrets(ctx, a.clientForSecrets, ts,
 		resource.ConnectionSecretMustBeControllableBy(to.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
 			// We consider the update to be a no-op and don't allow it if the
@@ -209,4 +217,34 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	}
 
 	return true, nil
+}
+
+// Apply changes to the supplied object. The object will be created if it does
+// not exist, or updated if it does.
+func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Secret, ao ...resource.ApplyOption) error {
+	m := o
+	if m.GetName() == "" && m.GetGenerateName() != "" {
+		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
+		return errors.Wrap(err, "cannot create object")
+	}
+	current := o.DeepCopyObject().(client.Object)
+	current, err := cfs.CoreV1().Secrets(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		_, e := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
+		return errors.Wrap(e, "cannot create object")
+	}
+	if err != nil {
+		return errors.Wrap(err, "cannot get object")
+	}
+
+	for _, fn := range ao {
+		if err := fn(ctx, current, m); err != nil {
+			return err
+		}
+	}
+	{
+		m.SetResourceVersion(current.(metav1.Object).GetResourceVersion())
+		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Update(context.TODO(), m, metav1.UpdateOptions{})
+		return errors.Wrap(err, "cannot update object")
+	}
 }
