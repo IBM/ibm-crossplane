@@ -17,6 +17,8 @@ package composite
 
 import (
 	"context"
+
+	clientset "k8s.io/client-go/kubernetes"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -53,6 +55,7 @@ func TestPublishConnection(t *testing.T) {
 
 	type args struct {
 		applicator resource.Applicator
+		cfs        *clientset.Clientset
 		o          resource.ConnectionSecretOwner
 		filter     []string
 		c          managed.ConnectionDetails
@@ -121,7 +124,7 @@ func TestPublishConnection(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			a := &APIFilteredSecretPublisher{tc.args.applicator, tc.args.filter}
+			a := &APIFilteredSecretPublisher{tc.args.applicator, tc.args.cfs, tc.args.filter}
 			got, err := a.PublishConnection(context.Background(), tc.args.o, tc.args.c)
 			if diff := cmp.Diff(tc.want.published, got); diff != "" {
 				t.Errorf("\n%s\nPublish(...): -want, +got:\n%s", tc.reason, diff)

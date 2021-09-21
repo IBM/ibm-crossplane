@@ -34,6 +34,7 @@ package composite
 
 import (
 	"context"
+
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -116,6 +117,8 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 		}
 	}
 
+	// IBM Patch: Remove cluster permission for Secrets
+	// - function to apply secrets using new client
 	err := applyForSecrets(ctx, a.clientForSecrets, s,
 		resource.ConnectionSecretMustBeControllableBy(o.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
@@ -135,6 +138,8 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 	return true, nil
 }
 
+// IBM Patch: Remove cluster permission for Secrets
+// - function definition to apply secrets
 func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Secret, ao ...resource.ApplyOption) error {
 	m := o
 
@@ -145,7 +150,6 @@ func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Se
 
 	desired := o.DeepCopyObject()
 
-	//err := a.client.Get(ctx, types.NamespacedName{Name: m.GetName(), Namespace: m.GetNamespace()}, o)
 	o, err := cfs.CoreV1().Secrets(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		_, e := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})

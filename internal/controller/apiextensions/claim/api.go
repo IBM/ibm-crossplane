@@ -18,6 +18,7 @@ package claim
 
 import (
 	"context"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -157,17 +158,17 @@ func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeC
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.
 type APIConnectionPropagator struct {
-	client 				resource.ClientApplicator
-	clientForSecrets    *clientset.Clientset
-	typer  runtime.ObjectTyper
+	client           resource.ClientApplicator
+	clientForSecrets *clientset.Clientset
+	typer            runtime.ObjectTyper
 }
 
 // NewAPIConnectionPropagator returns a new APIConnectionPropagator.
 func NewAPIConnectionPropagator(c client.Client, cfs *clientset.Clientset, t runtime.ObjectTyper) *APIConnectionPropagator {
 	return &APIConnectionPropagator{
-		client: resource.ClientApplicator{Client: c, Applicator: resource.NewAPIUpdatingApplicator(c)},
+		client:           resource.ClientApplicator{Client: c, Applicator: resource.NewAPIUpdatingApplicator(c)},
 		clientForSecrets: cfs,
-		typer:  t,
+		typer:            t,
 	}
 }
 
@@ -182,8 +183,9 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		Namespace: from.GetWriteConnectionSecretToReference().Namespace,
 		Name:      from.GetWriteConnectionSecretToReference().Name,
 	}
-	fs := &corev1.Secret{}
 
+	// IBM Patch: Remove cluster permission for Secrets
+	// - new client has been created to avoid using cluster-scope informers
 	fs, errGet := a.clientForSecrets.CoreV1().Secrets(n.Namespace).Get(context.TODO(), n.Name, metav1.GetOptions{})
 
 	if errGet != nil {
@@ -200,6 +202,8 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	ts := resource.LocalConnectionSecretFor(to, resource.MustGetKind(to, a.typer))
 	ts.Data = fs.Data
 
+	// IBM Patch: Remove cluster permission for Secrets
+	// - function to apply secrets using new client
 	err := applyForSecrets(ctx, a.clientForSecrets, ts,
 		resource.ConnectionSecretMustBeControllableBy(to.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
@@ -219,15 +223,14 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	return true, nil
 }
 
-// Apply changes to the supplied object. The object will be created if it does
-// not exist, or updated if it does.
+// IBM Patch: Remove cluster permission for Secrets
+// - function definition to apply secrets
 func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Secret, ao ...resource.ApplyOption) error {
 	m := o
 	if m.GetName() == "" && m.GetGenerateName() != "" {
 		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
 		return errors.Wrap(err, "cannot create object")
 	}
-	current := o.DeepCopyObject().(client.Object)
 	current, err := cfs.CoreV1().Secrets(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		_, e := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
@@ -243,7 +246,7 @@ func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Se
 		}
 	}
 	{
-		m.SetResourceVersion(current.(metav1.Object).GetResourceVersion())
+		m.SetResourceVersion(current.GetResourceVersion())
 		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Update(context.TODO(), m, metav1.UpdateOptions{})
 		return errors.Wrap(err, "cannot update object")
 	}

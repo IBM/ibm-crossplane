@@ -33,10 +33,11 @@ package offered
 
 import (
 	"context"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/pkg/errors"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -381,6 +382,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
 
+	// IBM Patch: Remove cluster permission for Secrets
+	// - create new client, that avoids using cluster-scope informers.
+	//   Will be needed in secrets creation in claim/composite resources.
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
 	config, err := kubeconfig.ClientConfig()
