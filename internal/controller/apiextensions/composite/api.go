@@ -86,10 +86,7 @@ type APIFilteredSecretPublisher struct {
 // NewAPIFilteredSecretPublisher returns a ConnectionPublisher that only
 // publishes connection secret keys that are included in the supplied filter.
 func NewAPIFilteredSecretPublisher(c client.Client, filter []string) *APIFilteredSecretPublisher {
-	return &APIFilteredSecretPublisher{
-		client: resource.NewAPIPatchingApplicator(c),
-		filter: filter,
-	}
+	return &APIFilteredSecretPublisher{client: resource.NewAPIPatchingApplicator(c), filter: filter}
 }
 
 // PublishConnection publishes the supplied ConnectionDetails to the Secret
