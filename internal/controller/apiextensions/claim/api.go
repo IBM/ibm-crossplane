@@ -179,7 +179,6 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		Name:      from.GetWriteConnectionSecretToReference().Name,
 	}
 	fs := &corev1.Secret{}
-
 	if err := a.client.Get(ctx, n, fs); err != nil {
 		return false, errors.Wrap(err, errGetSecret)
 	}

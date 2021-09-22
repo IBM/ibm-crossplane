@@ -325,8 +325,12 @@ func NewReconciler(mgr manager.Manager, cfs client.Client, of resource.Composite
 		composite: compositeResource{
 			CompositionSelector: NewAPILabelSelectorResolver(kube),
 			Configurator:        NewConfiguratorChain(NewAPINamingConfigurator(kube), NewAPIConfigurator(kube)),
-			ConnectionPublisher: NewAPIFilteredSecretPublisher(kube, cfs, []string{}),
-			Renderer:            RendererFn(RenderComposite),
+			// IBM Patch: Remove cluster permission for Secrets
+			// applied client has been changed to `cfs` as it is a client without cluster scope informers
+			// used for secrets manipulations
+			ConnectionPublisher: NewAPIFilteredSecretPublisher(cfs, []string{}),
+			// IBM Patch: end
+			Renderer: RendererFn(RenderComposite),
 		},
 
 		composed: composedResource{

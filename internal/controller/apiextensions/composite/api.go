@@ -79,18 +79,16 @@ const (
 // APIFilteredSecretPublisher publishes ConnectionDetails content after filtering
 // it through a set of permitted keys.
 type APIFilteredSecretPublisher struct {
-	client           resource.Applicator
-	clientForSecrets resource.Applicator
-	filter           []string
+	client resource.Applicator
+	filter []string
 }
 
 // NewAPIFilteredSecretPublisher returns a ConnectionPublisher that only
 // publishes connection secret keys that are included in the supplied filter.
-func NewAPIFilteredSecretPublisher(c client.Client, cfs client.Client, filter []string) *APIFilteredSecretPublisher {
+func NewAPIFilteredSecretPublisher(c client.Client, filter []string) *APIFilteredSecretPublisher {
 	return &APIFilteredSecretPublisher{
-		client:           resource.NewAPIPatchingApplicator(c),
-		clientForSecrets: resource.NewAPIPatchingApplicator(cfs),
-		filter:           filter,
+		client: resource.NewAPIPatchingApplicator(c),
+		filter: filter,
 	}
 }
 
@@ -114,9 +112,7 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 		}
 	}
 
-	// IBM Patch: Remove cluster permission for Secrets
-	// - new client 'clientForSecrets' has been created to avoid using cluster-scope informers
-	err := a.clientForSecrets.Apply(ctx, s,
+	err := a.client.Apply(ctx, s,
 		resource.ConnectionSecretMustBeControllableBy(o.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
 			// We consider the update to be a no-op and don't allow it if the

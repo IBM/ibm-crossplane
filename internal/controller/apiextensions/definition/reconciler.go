@@ -416,7 +416,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	o := kcontroller.Options{Reconciler: composite.NewReconciler(r.mgr,
 		r.clientForSecrets,
 		resource.CompositeKind(d.GetCompositeGroupVersionKind()),
-		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.client, r.clientForSecrets, d.GetConnectionSecretKeys())),
+		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.clientForSecrets, d.GetConnectionSecretKeys())),
 		composite.WithCompositionSelector(composite.NewCompositionSelectorChain(
 			composite.NewEnforcedCompositionSelector(*d, recorder),
 			composite.NewAPIDefaultCompositionSelector(r.client, *meta.ReferenceTo(d, v1.CompositeResourceDefinitionGroupVersionKind), recorder),
