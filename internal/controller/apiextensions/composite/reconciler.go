@@ -34,7 +34,6 @@ package composite
 
 import (
 	"context"
-
 	"time"
 
 	"github.com/pkg/errors"

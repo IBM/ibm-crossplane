@@ -34,7 +34,6 @@ package composite
 
 import (
 	"context"
-
 	"math/rand"
 	"os"
 	"time"
