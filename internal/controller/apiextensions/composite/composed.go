@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 //
 // Copyright 2021 IBM Corporation
 //
@@ -432,7 +431,14 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 		// that we'll propagate any connection details during a future
 		// iteration.
 		s := &corev1.Secret{}
-		nn := types.NamespacedName{Namespace: sref.Namespace, Name: sref.Name}
+
+		// IBM Patch: Default the connection secret namespace to the composed resource namespace
+		n := sref.Namespace
+		if n == "" {
+			n = cd.GetNamespace()
+		}
+
+		nn := types.NamespacedName{Namespace: n, Name: sref.Name}
 		if err := cdf.client.Get(ctx, nn, s); client.IgnoreNotFound(err) != nil {
 			return nil, errors.Wrap(err, errGetSecret)
 		}
