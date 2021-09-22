@@ -234,7 +234,7 @@ func WithRecorder(er event.Recorder) ReconcilerOption {
 // The returned Reconciler will apply only the ObjectMetaConfigurator by
 // default; most callers should supply one or more CompositeConfigurators to
 // configure their composite resources.
-func NewReconciler(m manager.Manager, of resource.CompositeClaimKind, with resource.CompositeKind, o ...ReconcilerOption) *Reconciler {
+func NewReconciler(m manager.Manager, cfs client.Client, of resource.CompositeClaimKind, with resource.CompositeKind, o ...ReconcilerOption) *Reconciler {
 	c := unstructured.NewClient(m.GetClient())
 	r := &Reconciler{
 		client: resource.ClientApplicator{
@@ -247,10 +247,14 @@ func NewReconciler(m manager.Manager, of resource.CompositeClaimKind, with resou
 		newComposite: func() resource.Composite {
 			return composite.New(composite.WithGroupVersionKind(schema.GroupVersionKind(with)))
 		},
-		composite: defaultCRComposite(c, m.GetScheme()),
-		claim:     defaultCRClaim(c, m.GetScheme()),
-		log:       logging.NewNopLogger(),
-		record:    event.NewNopRecorder(),
+		// IBM Patch: Remove cluster permission for Secrets
+		// applied client has been changed to `cfs` as it is a client without cluster scope informers
+		// used for secrets manipulations
+		composite: defaultCRComposite(cfs, m.GetScheme()),
+		// IBM Patch: end
+		claim:  defaultCRClaim(c, m.GetScheme()),
+		log:    logging.NewNopLogger(),
+		record: event.NewNopRecorder(),
 	}
 
 	for _, ro := range o {

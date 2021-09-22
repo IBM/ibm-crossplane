@@ -300,7 +300,7 @@ type composedResource struct {
 }
 
 // NewReconciler returns a new Reconciler of composite resources.
-func NewReconciler(mgr manager.Manager, of resource.CompositeKind, opts ...ReconcilerOption) *Reconciler {
+func NewReconciler(mgr manager.Manager, cfs client.Client, of resource.CompositeKind, opts ...ReconcilerOption) *Reconciler {
 	nc := func() resource.Composite {
 		return composite.New(composite.WithGroupVersionKind(schema.GroupVersionKind(of)))
 	}
@@ -324,8 +324,12 @@ func NewReconciler(mgr manager.Manager, of resource.CompositeKind, opts ...Recon
 		composite: compositeResource{
 			CompositionSelector: NewAPILabelSelectorResolver(kube),
 			Configurator:        NewConfiguratorChain(NewAPINamingConfigurator(kube), NewAPIConfigurator(kube)),
-			ConnectionPublisher: NewAPIFilteredSecretPublisher(kube, []string{}),
-			Renderer:            RendererFn(RenderComposite),
+			// IBM Patch: Remove cluster permission for Secrets
+			// applied client has been changed to `cfs` as it is a client without cluster scope informers
+			// used for secrets manipulations
+			ConnectionPublisher: NewAPIFilteredSecretPublisher(cfs, []string{}),
+			// IBM Patch: end
+			Renderer: RendererFn(RenderComposite),
 		},
 
 		composed: composedResource{

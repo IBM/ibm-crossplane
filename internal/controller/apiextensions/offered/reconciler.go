@@ -43,6 +43,7 @@ import (
 	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	kcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -127,6 +128,16 @@ func (fn CRDRenderFn) Render(d *v1.CompositeResourceDefinition) (*extv1.CustomRe
 func Setup(mgr ctrl.Manager, log logging.Logger) error {
 	name := "offered/" + strings.ToLower(v1.CompositeResourceDefinitionGroupKind)
 
+	// IBM Patch: Remove cluster permission for Secrets
+	// - create new client, that avoids using cluster-scope informers.
+	//   Will be needed in secrets creation in claim/composite resources.
+	config := mgr.GetConfig()
+	cfs, err := client.New(config, client.Options{})
+	if err != nil {
+		log.Debug("Cannot create client for secrets", "error", err)
+	}
+	// IBM Patch end
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		For(&v1.CompositeResourceDefinition{}).
@@ -134,6 +145,7 @@ func Setup(mgr ctrl.Manager, log logging.Logger) error {
 		WithEventFilter(resource.NewPredicates(OffersClaim())).
 		WithOptions(kcontroller.Options{MaxConcurrentReconciles: maxConcurrency}).
 		Complete(NewReconciler(mgr,
+			cfs,
 			WithLogger(log.WithValues("controller", name)),
 			WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name)))))
 }
@@ -188,7 +200,7 @@ func WithClientApplicator(ca resource.ClientApplicator) ReconcilerOption {
 }
 
 // NewReconciler returns a Reconciler of CompositeResourceDefinitions.
-func NewReconciler(mgr manager.Manager, opts ...ReconcilerOption) *Reconciler {
+func NewReconciler(mgr manager.Manager, cfs client.Client, opts ...ReconcilerOption) *Reconciler {
 	kube := unstructured.NewClient(mgr.GetClient())
 
 	r := &Reconciler{
@@ -197,6 +209,11 @@ func NewReconciler(mgr manager.Manager, opts ...ReconcilerOption) *Reconciler {
 		client: resource.ClientApplicator{
 			Client:     kube,
 			Applicator: resource.NewAPIUpdatingApplicator(kube),
+		},
+
+		clientForSecrets: resource.ClientApplicator{
+			Client:     cfs,
+			Applicator: resource.NewAPIUpdatingApplicator(cfs),
 		},
 
 		claim: definition{
@@ -223,8 +240,9 @@ type definition struct {
 
 // A Reconciler reconciles CompositeResourceDefinitions.
 type Reconciler struct {
-	mgr    manager.Manager
-	client resource.ClientApplicator
+	mgr              manager.Manager
+	client           resource.ClientApplicator
+	clientForSecrets resource.ClientApplicator
 
 	claim definition
 
@@ -380,6 +398,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,
+		r.clientForSecrets,
 		resource.CompositeClaimKind(d.GetClaimGroupVersionKind()),
 		resource.CompositeKind(d.GetCompositeGroupVersionKind()),
 		claim.WithLogger(log.WithValues("controller", claim.ControllerName(d.GetName()))),

@@ -43,6 +43,7 @@ func TestReconcile(t *testing.T) {
 
 	type args struct {
 		mgr  manager.Manager
+		cfs  client.Client
 		of   resource.CompositeClaimKind
 		with resource.CompositeKind
 		opts []ReconcilerOption
@@ -423,7 +424,7 @@ func TestReconcile(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			r := NewReconciler(tc.args.mgr, tc.args.of, tc.args.with, tc.args.opts...)
+			r := NewReconciler(tc.args.mgr, tc.args.cfs, tc.args.of, tc.args.with, tc.args.opts...)
 			got, err := r.Reconcile(context.Background(), reconcile.Request{})
 
 			if diff := cmp.Diff(tc.want.err, err, test.EquateErrors()); diff != "" {
