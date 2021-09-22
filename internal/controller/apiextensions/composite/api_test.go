@@ -699,8 +699,11 @@ func TestSelectorResolver(t *testing.T) {
 		"ListFailed": {
 			reason: "Should fail if List query fails",
 			args: args{
-				kube: &test.MockClient{MockList: test.NewMockListFn(errBoom)},
-				cp:   &fake.Composite{},
+				kube: &test.MockClient{
+					MockList: test.NewMockListFn(errBoom),
+					MockGet:  test.NewMockGetFn(nil),
+				},
+				cp: &fake.Composite{},
 			},
 			want: want{
 				cp:  &fake.Composite{},
@@ -710,7 +713,10 @@ func TestSelectorResolver(t *testing.T) {
 		"NoneCompatible": {
 			reason: "Should fail if it cannot find a compatible Composition",
 			args: args{
-				kube: &test.MockClient{MockList: test.NewMockListFn(nil)},
+				kube: &test.MockClient{
+					MockList: test.NewMockListFn(nil),
+					MockGet:  test.NewMockGetFn(nil),
+				},
 				cp: &fake.Composite{
 					CompositionSelector: fake.CompositionSelector{Sel: sel},
 				},
@@ -727,6 +733,7 @@ func TestSelectorResolver(t *testing.T) {
 			args: args{
 				kube: &test.MockClient{
 					MockUpdate: test.NewMockUpdateFn(nil),
+					MockGet:    test.NewMockGetFn(nil),
 					MockList: func(_ context.Context, obj client.ObjectList, _ ...client.ListOption) error {
 						compList := &v1.CompositionList{
 							Items: []v1.Composition{

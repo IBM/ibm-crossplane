@@ -118,14 +118,14 @@ func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
 	return out
 }
 
-// SetResourceRef - you can set resourceRef or you can remove it , if you set nil
+// SetResourceRef - you can set resourceRef, or you can remove it, if you set nil
 func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
 	data, ok := cm.(*claim.Unstructured)
 	if !ok {
 		return nil
 	}
 
-	// initailize status if we need to set it and it is not exists
+	// initialize status if we need to set it and it is not exists
 	if data.Object["status"] == nil && resourceRef != nil {
 		data.Object["status"] = map[string]interface{}{
 			"resourceRef": resourceRef,

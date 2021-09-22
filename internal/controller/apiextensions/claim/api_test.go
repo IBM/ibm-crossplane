@@ -105,11 +105,7 @@ func TestBind(t *testing.T) {
 			},
 			want: want{
 				cm: &fake.CompositeClaim{
-					CompositeResourceReferencer: fake.CompositeResourceReferencer{
-						Ref: &corev1.ObjectReference{
-							Name: "who",
-						},
-					},
+					CompositeResourceReferencer: fake.CompositeResourceReferencer{},
 				},
 				err: errors.Wrap(errBoom, errUpdateClaim),
 			},
