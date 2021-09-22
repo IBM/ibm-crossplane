@@ -18,7 +18,6 @@ package composite
 import (
 	"context"
 
-	clientset "k8s.io/client-go/kubernetes"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -55,7 +54,7 @@ func TestPublishConnection(t *testing.T) {
 
 	type args struct {
 		applicator resource.Applicator
-		cfs        *clientset.Clientset
+		cfs        resource.Applicator
 		o          resource.ConnectionSecretOwner
 		filter     []string
 		c          managed.ConnectionDetails
@@ -79,8 +78,8 @@ func TestPublishConnection(t *testing.T) {
 		"ApplyError": {
 			reason: "An error applying the connection secret should be returned",
 			args: args{
-				applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error { return errBoom }),
-				o:          owner,
+				cfs: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error { return errBoom }),
+				o:   owner,
 			},
 			want: want{
 				err: errors.Wrap(errBoom, errApplySecret),
@@ -89,7 +88,7 @@ func TestPublishConnection(t *testing.T) {
 		"SuccessfulNoOp": {
 			reason: "If application would be a no-op we should not publish a secret.",
 			args: args{
-				applicator: resource.ApplyFn(func(ctx context.Context, o client.Object, _ ...resource.ApplyOption) error {
+				cfs: resource.ApplyFn(func(ctx context.Context, o client.Object, _ ...resource.ApplyOption) error {
 					// Simulate a no-op change by not allowing the update.
 					return resource.AllowUpdateIf(func(_, _ runtime.Object) bool { return false })(ctx, o, o)
 				}),
@@ -104,7 +103,7 @@ func TestPublishConnection(t *testing.T) {
 		"SuccessfulPublish": {
 			reason: "if the secret changed we should publish it.",
 			args: args{
-				applicator: resource.ApplyFn(func(_ context.Context, o client.Object, _ ...resource.ApplyOption) error {
+				cfs: resource.ApplyFn(func(_ context.Context, o client.Object, _ ...resource.ApplyOption) error {
 					want := resource.ConnectionSecretFor(owner, owner.GetObjectKind().GroupVersionKind())
 					want.Data = managed.ConnectionDetails{"onlyme": {41}}
 					if diff := cmp.Diff(want, o); diff != "" {

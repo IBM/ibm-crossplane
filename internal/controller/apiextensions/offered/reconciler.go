@@ -36,7 +36,8 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/pkg/errors"
@@ -389,9 +390,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
 	config, err := kubeconfig.ClientConfig()
 	if err != nil {
-		log.Debug("Cannot create clientset for secrets", "error", err)
+		log.Debug("Cannot create config for client", "error", err)
 	}
-	cfs := kubernetes.NewForConfigOrDie(config)
+	cfs, err := client.New(config, client.Options{})
+	if err != nil {
+		log.Debug("Cannot create client for secrets", "error", err)
+	}
+	// IBM Patch end
 
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,
 		cfs,

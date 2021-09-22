@@ -35,9 +35,6 @@ package composite
 import (
 	"context"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientset "k8s.io/client-go/kubernetes"
 	"math/rand"
 	"os"
 	"time"
@@ -82,18 +79,18 @@ const (
 // APIFilteredSecretPublisher publishes ConnectionDetails content after filtering
 // it through a set of permitted keys.
 type APIFilteredSecretPublisher struct {
-	client resource.Applicator
-	clientForSecrets *clientset.Clientset
-	filter []string
+	client           resource.Applicator
+	clientForSecrets resource.Applicator
+	filter           []string
 }
 
 // NewAPIFilteredSecretPublisher returns a ConnectionPublisher that only
 // publishes connection secret keys that are included in the supplied filter.
-func NewAPIFilteredSecretPublisher(c client.Client, cfs *clientset.Clientset, filter []string) *APIFilteredSecretPublisher {
+func NewAPIFilteredSecretPublisher(c client.Client, cfs client.Client, filter []string) *APIFilteredSecretPublisher {
 	return &APIFilteredSecretPublisher{
-		client: resource.NewAPIPatchingApplicator(c),
-		clientForSecrets: cfs,
-		filter: filter,
+		client:           resource.NewAPIPatchingApplicator(c),
+		clientForSecrets: resource.NewAPIPatchingApplicator(cfs),
+		filter:           filter,
 	}
 }
 
@@ -118,8 +115,8 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 	}
 
 	// IBM Patch: Remove cluster permission for Secrets
-	// - function to apply secrets using new client
-	err := applyForSecrets(ctx, a.clientForSecrets, s,
+	// - new client 'clientForSecrets' has been created to avoid using cluster-scope informers
+	err := a.clientForSecrets.Apply(ctx, s,
 		resource.ConnectionSecretMustBeControllableBy(o.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
 			// We consider the update to be a no-op and don't allow it if the
@@ -136,39 +133,6 @@ func (a *APIFilteredSecretPublisher) PublishConnection(ctx context.Context, o re
 	}
 
 	return true, nil
-}
-
-// IBM Patch: Remove cluster permission for Secrets
-// - function definition to apply secrets
-func applyForSecrets(ctx context.Context, cfs *clientset.Clientset, o *corev1.Secret, ao ...resource.ApplyOption) error {
-	m := o
-
-	if m.GetName() == "" && m.GetGenerateName() != "" {
-		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
-		return errors.Wrap(err, "cannot create object")
-	}
-
-	desired := o.DeepCopyObject()
-
-	o, err := cfs.CoreV1().Secrets(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		_, e := cfs.CoreV1().Secrets(m.GetNamespace()).Create(context.TODO(), m, metav1.CreateOptions{})
-		return errors.Wrap(e, "cannot create object")
-	}
-	if err != nil {
-		return errors.Wrap(err, "cannot get object")
-	}
-
-	for _, fn := range ao {
-		if err := fn(ctx, o, desired); err != nil {
-			return err
-		}
-	}
-
-	{
-		_, err := cfs.CoreV1().Secrets(m.GetNamespace()).Update(context.TODO(), m, metav1.UpdateOptions{})
-		return errors.Wrap(err, "cannot update object")
-	}
 }
 
 // UnpublishConnection is no-op since PublishConnection only creates resources

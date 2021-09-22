@@ -19,7 +19,6 @@ package composite
 import (
 	"context"
 
-	clientset "k8s.io/client-go/kubernetes"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -45,7 +44,7 @@ func TestReconcile(t *testing.T) {
 
 	type args struct {
 		mgr  manager.Manager
-		cfs  *clientset.Clientset
+		cfs  client.Client
 		of   resource.CompositeKind
 		opts []ReconcilerOption
 	}
