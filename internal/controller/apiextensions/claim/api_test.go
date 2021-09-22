@@ -205,9 +205,8 @@ func TestPropagateConnection(t *testing.T) {
 	}
 
 	type fields struct {
-		client           resource.ClientApplicator
-		clientForSecrets resource.ClientApplicator
-		typer            runtime.ObjectTyper
+		client resource.ClientApplicator
+		typer  runtime.ObjectTyper
 	}
 
 	type args struct {
@@ -249,7 +248,7 @@ func TestPropagateConnection(t *testing.T) {
 		"GetManagedSecretError": {
 			reason: "Errors getting the composite resource's connection secret should be returned",
 			fields: fields{
-				clientForSecrets: resource.ClientApplicator{
+				client: resource.ClientApplicator{
 					Client: &test.MockClient{MockGet: test.NewMockGetFn(errBoom)},
 				},
 			},
@@ -264,7 +263,7 @@ func TestPropagateConnection(t *testing.T) {
 		"ManagedResourceDoesNotControlSecret": {
 			reason: "The composite resource must control its connection secret before it can be propagated",
 			fields: fields{
-				clientForSecrets: resource.ClientApplicator{
+				client: resource.ClientApplicator{
 					// Simulate getting a secret that is not controlled by the
 					// composite resource by not modifying the secret passed to
 					// the client, and not returning an error. We thus proceed
@@ -284,7 +283,7 @@ func TestPropagateConnection(t *testing.T) {
 		"ApplyClaimSecretError": {
 			reason: "Errors applying the claim connection secret should be returned",
 			fields: fields{
-				clientForSecrets: resource.ClientApplicator{
+				client: resource.ClientApplicator{
 					Client: &test.MockClient{MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 						s := resource.ConnectionSecretFor(cp, fake.GVK(cp))
 						*o.(*corev1.Secret) = *s
@@ -305,7 +304,7 @@ func TestPropagateConnection(t *testing.T) {
 		"SuccessfulNoOp": {
 			reason: "The claim secret should not be updated if it would not change",
 			fields: fields{
-				clientForSecrets: resource.ClientApplicator{
+				client: resource.ClientApplicator{
 					Client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 							// The managed secret has some data when we get it.
@@ -334,7 +333,7 @@ func TestPropagateConnection(t *testing.T) {
 		"SuccessfulPublish": {
 			reason: "Successful propagation should update the claim secret with the appropriate values",
 			fields: fields{
-				clientForSecrets: resource.ClientApplicator{
+				client: resource.ClientApplicator{
 					Client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 							// The managed secret has some data when we get it.
@@ -373,7 +372,7 @@ func TestPropagateConnection(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			api := &APIConnectionPropagator{client: tc.fields.client, clientForSecrets: tc.fields.clientForSecrets, typer: tc.fields.typer}
+			api := &APIConnectionPropagator{client: tc.fields.client, typer: tc.fields.typer}
 			got, err := api.PropagateConnection(tc.args.ctx, tc.args.to, tc.args.from)
 			if diff := cmp.Diff(tc.want.propagated, got); diff != "" {
 				t.Errorf("\n%s\napi.PropagateConnection(...): -want, +got:\n%s", tc.reason, diff)

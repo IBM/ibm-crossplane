@@ -143,10 +143,10 @@ type crComposite struct {
 	ConnectionPropagator
 }
 
-func defaultCRComposite(c client.Client, cfs client.Client, t runtime.ObjectTyper) crComposite {
+func defaultCRComposite(c client.Client, t runtime.ObjectTyper) crComposite {
 	return crComposite{
 		Configurator:         ConfiguratorFn(ConfigureComposite),
-		ConnectionPropagator: NewAPIConnectionPropagator(c, cfs, t),
+		ConnectionPropagator: NewAPIConnectionPropagator(c, t),
 	}
 }
 
@@ -247,10 +247,14 @@ func NewReconciler(m manager.Manager, cfs client.Client, of resource.CompositeCl
 		newComposite: func() resource.Composite {
 			return composite.New(composite.WithGroupVersionKind(schema.GroupVersionKind(with)))
 		},
-		composite: defaultCRComposite(c, cfs, m.GetScheme()),
-		claim:     defaultCRClaim(c, m.GetScheme()),
-		log:       logging.NewNopLogger(),
-		record:    event.NewNopRecorder(),
+		// IBM Patch: Remove cluster permission for Secrets
+		// applied client has been changed to `cfs` as it is a client without cluster scope informers
+		// used for secrets manipulations
+		composite: defaultCRComposite(cfs, m.GetScheme()),
+		// IBM Patch: end
+		claim:  defaultCRClaim(c, m.GetScheme()),
+		log:    logging.NewNopLogger(),
+		record: event.NewNopRecorder(),
 	}
 
 	for _, ro := range o {

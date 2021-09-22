@@ -155,17 +155,15 @@ func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeC
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.
 type APIConnectionPropagator struct {
-	client           resource.ClientApplicator
-	clientForSecrets resource.ClientApplicator
-	typer            runtime.ObjectTyper
+	client resource.ClientApplicator
+	typer  runtime.ObjectTyper
 }
 
 // NewAPIConnectionPropagator returns a new APIConnectionPropagator.
-func NewAPIConnectionPropagator(c client.Client, cfs client.Client, t runtime.ObjectTyper) *APIConnectionPropagator {
+func NewAPIConnectionPropagator(c client.Client, t runtime.ObjectTyper) *APIConnectionPropagator {
 	return &APIConnectionPropagator{
-		client:           resource.ClientApplicator{Client: c, Applicator: resource.NewAPIUpdatingApplicator(c)},
-		clientForSecrets: resource.ClientApplicator{Client: cfs, Applicator: resource.NewAPIUpdatingApplicator(cfs)},
-		typer:            t,
+		client: resource.ClientApplicator{Client: c, Applicator: resource.NewAPIUpdatingApplicator(c)},
+		typer:  t,
 	}
 }
 
@@ -182,9 +180,7 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	}
 	fs := &corev1.Secret{}
 
-	// IBM Patch: Remove cluster permission for Secrets
-	// - new client 'clientForSecrets' has been created to avoid using cluster-scope informers
-	if err := a.clientForSecrets.Get(ctx, n, fs); err != nil {
+	if err := a.client.Get(ctx, n, fs); err != nil {
 		return false, errors.Wrap(err, errGetSecret)
 	}
 
@@ -198,9 +194,7 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 	ts := resource.LocalConnectionSecretFor(to, resource.MustGetKind(to, a.typer))
 	ts.Data = fs.Data
 
-	// IBM Patch: Remove cluster permission for Secrets
-	// - new client 'clientForSecrets' has been created to avoid using cluster-scope informers
-	err := a.clientForSecrets.Apply(ctx, ts,
+	err := a.client.Apply(ctx, ts,
 		resource.ConnectionSecretMustBeControllableBy(to.GetUID()),
 		resource.AllowUpdateIf(func(current, desired runtime.Object) bool {
 			// We consider the update to be a no-op and don't allow it if the
