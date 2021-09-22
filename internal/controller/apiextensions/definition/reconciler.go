@@ -34,8 +34,6 @@ package definition
 import (
 	"context"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"strings"
@@ -131,10 +129,7 @@ func Setup(mgr ctrl.Manager, log logging.Logger) error {
 	// IBM Patch: Remove cluster permission for Secrets
 	// - create new client, that avoids using cluster-scope informers.
 	//   Will be needed in secrets creation in claim/composite resources.
-	config, err := config.GetConfig()
-	if err != nil {
-		log.Debug("Cannot create config for client", "error", err)
-	}
+	config := mgr.GetConfig()
 	cfs, err := client.New(config, client.Options{})
 	if err != nil {
 		log.Debug("Cannot create client for secrets", "error", err)

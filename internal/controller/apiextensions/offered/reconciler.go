@@ -36,9 +36,6 @@ import (
 	"strings"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
 	"github.com/pkg/errors"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kmeta "k8s.io/apimachinery/pkg/api/meta"
@@ -46,6 +43,7 @@ import (
 	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	kcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -133,10 +131,7 @@ func Setup(mgr ctrl.Manager, log logging.Logger) error {
 	// IBM Patch: Remove cluster permission for Secrets
 	// - create new client, that avoids using cluster-scope informers.
 	//   Will be needed in secrets creation in claim/composite resources.
-	config, err := config.GetConfig()
-	if err != nil {
-		log.Debug("Cannot create config for client", "error", err)
-	}
+	config := mgr.GetConfig()
 	cfs, err := client.New(config, client.Options{})
 	if err != nil {
 		log.Debug("Cannot create client for secrets", "error", err)
