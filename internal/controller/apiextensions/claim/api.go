@@ -180,10 +180,10 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		Namespace: from.GetWriteConnectionSecretToReference().Namespace,
 		Name:      from.GetWriteConnectionSecretToReference().Name,
 	}
+	fs := &corev1.Secret{}
 
 	// IBM Patch: Remove cluster permission for Secrets
 	// - new client 'clientForSecrets' has been created to avoid using cluster-scope informers
-	fs := &corev1.Secret{}
 	if err := a.clientForSecrets.Get(ctx, n, fs); err != nil {
 		return false, errors.Wrap(err, errGetSecret)
 	}

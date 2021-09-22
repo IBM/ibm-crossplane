@@ -396,10 +396,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			"desired-version", desired.APIVersion))
 	}
 
+	recorder := r.record.WithAnnotations("controller", composite.ControllerName(d.GetName()))
+
 	// IBM Patch: Remove cluster permission for Secrets
 	// - create new client, that avoids using cluster-scope informers.
 	//   Will be needed in secrets creation in claim/composite resources.
-	recorder := r.record.WithAnnotations("controller", composite.ControllerName(d.GetName()))
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
 	config, err := kubeconfig.ClientConfig()
