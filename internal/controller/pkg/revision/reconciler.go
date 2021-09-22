@@ -22,11 +22,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/crossplane/crossplane-runtime/pkg/event"
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
@@ -37,6 +40,7 @@ import (
 	pkgmetav1 "github.com/crossplane/crossplane/apis/pkg/meta/v1"
 	v1 "github.com/crossplane/crossplane/apis/pkg/v1"
 	"github.com/crossplane/crossplane/apis/pkg/v1alpha1"
+	"github.com/crossplane/crossplane/apis/pkg/v1beta1"
 	"github.com/crossplane/crossplane/internal/dag"
 	"github.com/crossplane/crossplane/internal/version"
 	"github.com/crossplane/crossplane/internal/xpkg"
@@ -68,6 +72,8 @@ const (
 	errPostHook = "cannot run post establish hook for package"
 
 	errEstablishControl = "cannot establish control of object"
+
+	errUpdateAnnotations = "cannot update annotations for package revision"
 )
 
 // Event reasons.
@@ -194,7 +200,7 @@ type Reconciler struct {
 }
 
 // SetupProviderRevision adds a controller that reconciles ProviderRevisions.
-func SetupProviderRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache, namespace string) error {
+func SetupProviderRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache, namespace, registry string) error {
 	name := "packages/" + strings.ToLower(v1.ProviderRevisionGroupKind)
 	nr := func() v1.PackageRevision { return &v1.ProviderRevision{} }
 
@@ -214,14 +220,14 @@ func SetupProviderRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache,
 
 	r := NewReconciler(mgr,
 		WithCache(cache),
-		WithDependencyManager(NewPackageDependencyManager(mgr.GetClient(), dag.NewMapDag, v1alpha1.ProviderPackageType)),
+		WithDependencyManager(NewPackageDependencyManager(mgr.GetClient(), dag.NewMapDag, v1beta1.ProviderPackageType)),
 		WithHooks(NewProviderHooks(resource.ClientApplicator{
 			Client:     mgr.GetClient(),
 			Applicator: resource.NewAPIPatchingApplicator(mgr.GetClient()),
 		}, namespace)),
 		WithNewPackageRevisionFn(nr),
 		WithParser(parser.New(metaScheme, objScheme)),
-		WithParserBackend(NewImageBackend(cache, xpkg.NewK8sFetcher(clientset, namespace))),
+		WithParserBackend(NewImageBackend(cache, xpkg.NewK8sFetcher(clientset, namespace), WithDefaultRegistry(registry))),
 		WithLinter(xpkg.NewProviderLinter()),
 		WithLogger(l.WithValues("controller", name)),
 		WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
@@ -230,11 +236,15 @@ func SetupProviderRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache,
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		For(&v1.ProviderRevision{}).
+		Owns(&appsv1.Deployment{}).
+		Watches(&source.Kind{Type: &v1alpha1.ControllerConfig{}}, &EnqueueRequestForReferencingProviderRevisions{
+			client: mgr.GetClient(),
+		}).
 		Complete(r)
 }
 
 // SetupConfigurationRevision adds a controller that reconciles ConfigurationRevisions.
-func SetupConfigurationRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache, namespace string) error {
+func SetupConfigurationRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache, namespace, registry string) error {
 	name := "packages/" + strings.ToLower(v1.ConfigurationRevisionGroupKind)
 	nr := func() v1.PackageRevision { return &v1.ConfigurationRevision{} }
 
@@ -254,11 +264,11 @@ func SetupConfigurationRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.C
 
 	r := NewReconciler(mgr,
 		WithCache(cache),
-		WithDependencyManager(NewPackageDependencyManager(mgr.GetClient(), dag.NewMapDag, v1alpha1.ConfigurationPackageType)),
+		WithDependencyManager(NewPackageDependencyManager(mgr.GetClient(), dag.NewMapDag, v1beta1.ConfigurationPackageType)),
 		WithHooks(NewConfigurationHooks()),
 		WithNewPackageRevisionFn(nr),
 		WithParser(parser.New(metaScheme, objScheme)),
-		WithParserBackend(NewImageBackend(cache, xpkg.NewK8sFetcher(clientset, namespace))),
+		WithParserBackend(NewImageBackend(cache, xpkg.NewK8sFetcher(clientset, namespace), WithDefaultRegistry(registry))),
 		WithLinter(xpkg.NewConfigurationLinter()),
 		WithLogger(l.WithValues("controller", name)),
 		WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
@@ -388,6 +398,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	pkgMeta, _ := xpkg.TryConvert(pkg.GetMeta()[0], &pkgmetav1.Provider{}, &pkgmetav1.Configuration{})
+
+	pr.SetAnnotations(pkgMeta.(metav1.ObjectMetaAccessor).GetObjectMeta().GetAnnotations())
+	if err := r.client.Update(ctx, pr); err != nil {
+		r.record.Event(pr, event.Warning(reasonSync, errors.Wrap(err, errUpdateAnnotations)))
+		log.Debug(errUpdateAnnotations, "error", err)
+		pr.SetConditions(v1.Unhealthy())
+		return reconcile.Result{RequeueAfter: shortWait}, errors.Wrapf(r.client.Status().Update(ctx, pr), errUpdateStatus)
+	}
+
 	// Check Crossplane constraints if they exist.
 	if pr.GetIgnoreCrossplaneConstraints() == nil || !*pr.GetIgnoreCrossplaneConstraints() {
 		if err := xpkg.PackageCrossplaneCompatible(r.versioner)(pkgMeta); err != nil {
@@ -441,5 +460,5 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	r.record.Event(pr, event.Normal(reasonSync, "Successfully configured package revision"))
 	pr.SetConditions(v1.Healthy())
-	return reconcile.Result{RequeueAfter: longWait}, errors.Wrap(r.client.Status().Update(ctx, pr), errUpdateStatus)
+	return reconcile.Result{Requeue: false}, errors.Wrap(r.client.Status().Update(ctx, pr), errUpdateStatus)
 }

@@ -65,7 +65,7 @@ spec:
             vpcIdSelector:
               matchControllerRef: true
             availabilityZone: us-east-1c
-    - name: subnet-c
+    - name: dbsubnetgroup
       base:
         apiVersion: database.aws.crossplane.io/v1beta1
         kind: DBSubnetGroup
@@ -139,7 +139,7 @@ spec:
             dbInstanceClass: db.t2.small
             masterUsername: masteruser
             engine: postgres
-            engineVersion: "9.6"
+            engineVersion: "12"
             skipFinalSnapshotBeforeDeletion: true
             publiclyAccessible: true
           writeConnectionSecretToRef:

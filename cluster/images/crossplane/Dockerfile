@@ -41,6 +41,7 @@ RUN microdnf update \
     && microdnf clean all
 
 ADD crossplane /usr/local/bin/
+ADD crds /crds
 EXPOSE 8080
 USER 1001
 ENTRYPOINT ["crossplane"]

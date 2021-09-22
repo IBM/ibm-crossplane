@@ -11,8 +11,12 @@ indent: true
 * [Resource Status and Conditions]
 * [Resource Events]
 * [Crossplane Logs]
+* [Provider Logs]
 * [Pausing Crossplane]
+* [Pausing Providers]
 * [Deleting When a Resource Hangs]
+* [Installing Crossplane Package]
+* [Handling Crossplane Package Dependency]
 
 ## Requested Resource Not Found
 
@@ -80,13 +84,46 @@ namespace. To get the current Crossplane logs, run the following:
 kubectl -n crossplane-system logs -lapp=crossplane
 ```
 
-Remember that much of Crossplane's functionality is provided by providers. You
-can use `kubectl logs` to view provider logs too.
-
 > Note that Crossplane emits few logs by default - events are typically the best
 > place to look for information about what Crossplane is doing. You may need to
-> restart Crossplane (or your provider) with the `--debug` flag if you can't 
-> find what you're looking for.
+> restart Crossplane with the `--debug` flag if you can't find what you're
+> looking for.
+
+## Provider Logs
+
+Remember that much of Crossplane's functionality is provided by providers. You
+can use `kubectl logs` to view provider logs too. By convention, they also emit
+few logs by default.
+
+```shell
+kubectl -n crossplane-system logs <name-of-provider-pod>
+```
+
+All providers maintained by the Crossplane community mirror Crossplane's support
+of the `--debug` flag. The easiest way to set flags on a provider is to create a
+`ControllerConfig` and reference it from the `Provider`:
+
+```yaml
+apiVersion: pkg.crossplane.io/v1alpha1
+kind: ControllerConfig
+metadata:
+  name: debug-config
+spec:
+  args:
+    - --debug
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-aws
+spec:
+  package: crossplane/provider-aws:v0.18.1
+  controllerConfigRef:
+    name: debug-config
+```
+
+> Note that a reference to a `ControllerConfig` can be added to an already
+> installed `Provider` and it will update its `Deployment` accordingly.
 
 ## Pausing Crossplane
 
@@ -106,8 +143,33 @@ unpause Crossplane simply by scaling its deployment back up:
 kubectl -n crossplane-system scale --replicas=1 deployment/crossplane
 ```
 
-Remember that much of Crossplane's functionality is provided by Providers. You
-can use `kubectl scale` to pause Provider controller pods too.
+## Pausing Providers
+
+Providers can also be paused when troubleshooting an issue or orchestrating a
+complex migration of resources. Creating and referencing a `ControllerConfig` is
+the easiest way to scale down a provider, and the `ControllerConfig` can be
+modified or the reference can be removed to scale it back up:
+
+```yaml
+apiVersion: pkg.crossplane.io/v1alpha1
+kind: ControllerConfig
+metadata:
+  name: scale-config
+spec:
+  replicas: 0
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-aws
+spec:
+  package: crossplane/provider-aws:v0.18.1
+  controllerConfigRef:
+    name: scale-config
+```
+
+> Note that a reference to a `ControllerConfig` can be added to an already
+> installed `Provider` and it will update its `Deployment` accordingly.
 
 ## Deleting When a Resource Hangs
 
@@ -135,6 +197,87 @@ For example, for a `CloudSQLInstance` managed resource (`database.gcp.crossplane
 kubectl patch cloudsqlinstance my-db -p '{"metadata":{"finalizers": []}}' --type=merge
 ```
 
+## Installing Crossplane Package
+
+After installing [Crossplane package], to verify the install results or 
+troubleshoot any issue spotted during the installation, there are a few things 
+you can do.
+
+Run below command to list all Crossplane resources available on your cluster:
+
+```console
+kubectl get crossplane
+```
+
+If you installed a Provider package, pay attention to the `Provider` and 
+`ProviderRevision` resource. Especially the `INSTALLED` and `HEALTHY` column. 
+They all need to be `TRUE`. Otherwise, there must be some errors that occurred
+during the installation.
+
+If you installed a Configuration package, pay attention to the `Configuration` 
+and `ConfigurationRevision` resource. Again, the `INSTALLED` and `HEALTHY` 
+column for these resources need to be `TRUE`. Besides that, you should also see 
+the `CompositeResourceDefinition` and `Composition` resources included in this 
+package are listed if the package is installed successfully.
+
+If you only care about the installed packages, you can also run below command
+which will show you all installed Configuration and Provider packages:
+
+```console
+kubectl get pkg
+```
+
+When there are errors, you can run below command to check detailed information 
+for the packages that are getting installed.
+
+```console
+kubectl get lock -o yaml
+```
+
+To inspect a particular package for troubleshooting, you can run 
+`kubectl describe` against the corresponding resources, e.g. the `Provider` and 
+`ProviderRevision` resource for Provider package, or the `Configuration` and 
+`ConfigurationRevision` resource for Configuration package. Usually, you should 
+be able to know the error reason by checking the `Status` and `Events` field for 
+these resources.
+
+## Handling Crossplane Package Dependency
+
+When using `crossplane.yaml` to define a Crossplane Configuration package, you 
+can specify packages that it depends on by including `spec.dependsOn`. You can 
+also specify version constraints for dependency packages.
+
+When you define a dependency package, please make sure you provide the fully 
+qualified address to the dependency package, but do not append the package 
+version (i.e. the OCI image tag) after the package name. This may lead to the 
+missing dependency error when Crossplane tries to install the dependency.
+
+When specifying the version constraint, you should strictly follow the 
+[semver spec]. Otherwise, it may not be able to find the appropriate version for 
+the dependency package even it says the dependency is found. This may lead to an 
+incompatible dependency error during the installation.
+
+Below is an example where a Configuration package depends on a provider pulled 
+from `crossplane/provider-aws`. It defines `">v0.16.0-0` as the version 
+constraint which means all versions after `v0.16.0` including all prerelease 
+versions, in the form of `-xyz` after the normal version string, will be 
+considered when Crossplane tries to find the best match.
+
+```yaml
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Configuration
+metadata:
+  name: test-configuration
+  annotations:
+    provider: aws
+spec:
+  crossplane:
+    version: ">=v1.0.0-0"
+  dependsOn:
+    - provider: crossplane/provider-aws
+      version: ">v0.16.0-0"
+```
+
 <!-- Named Links -->
 
 [Requested Resource Not Found]: #requested-resource-not-found
@@ -142,5 +285,11 @@ kubectl patch cloudsqlinstance my-db -p '{"metadata":{"finalizers": []}}' --type
 [Resource Status and Conditions]: #resource-status-and-conditions
 [Resource Events]: #resource-events
 [Crossplane Logs]: #crossplane-logs
+[Provider Logs]: #provider-logs
 [Pausing Crossplane]: #pausing-crossplane
+[Pausing Providers]: #pausing-providers
 [Deleting When a Resource Hangs]: #deleting-when-a-resource-hangs
+[Installing Crossplane Package]: #installing-crossplane-package
+[Crossplane package]: https://crossplane.io/docs/v1.3/concepts/packages.html
+[Handling Crossplane Package Dependency]: #handling-crossplane-package-dependency
+[semver spec]: https://github.com/Masterminds/semver#basic-comparisons

@@ -27,6 +27,8 @@ import (
 // +genclient:nonNamespaced
 
 // Provider is the CRD type for a request to add a provider to Crossplane.
+// [DEPRECATED]: Please use the identical v1 API instead. The v1beta1 API is
+// scheduled to be removed in Crossplane v1.6.
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="INSTALLED",type="string",JSONPath=".status.conditions[?(@.type=='Installed')].status"
 // +kubebuilder:printcolumn:name="HEALTHY",type="string",JSONPath=".status.conditions[?(@.type=='Healthy')].status"
@@ -72,6 +74,8 @@ type ProviderList struct {
 // +genclient:nonNamespaced
 
 // A ProviderRevision that has been added to Crossplane.
+// [DEPRECATED]: Please use the identical v1 API instead. The v1beta1 API is
+// scheduled to be removed in Crossplane v1.6.
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="HEALTHY",type="string",JSONPath=".status.conditions[?(@.type=='Healthy')].status"
 // +kubebuilder:printcolumn:name="REVISION",type="string",JSONPath=".spec.revision"
@@ -80,7 +84,7 @@ type ProviderList struct {
 // +kubebuilder:printcolumn:name="DEP-FOUND",type="string",JSONPath=".status.foundDependencies"
 // +kubebuilder:printcolumn:name="DEP-INSTALLED",type="string",JSONPath=".status.installedDependencies"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-// +kubebuilder:resource:scope=Cluster,categories={crossplane}
+// +kubebuilder:resource:scope=Cluster,categories={crossplane,pkgrev}
 type ProviderRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

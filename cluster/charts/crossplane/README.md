@@ -69,7 +69,7 @@ and their default values.
 | `affinity` | Enable affinity for Crossplane pod | `{}` |
 | `image.repository` | Image | `crossplane/crossplane` |
 | `image.tag` | Image tag | `master` |
-| `image.pullPolicy` | Image pull policy | `Always` |
+| `image.pullPolicy` | Image pull policy used in all containers | `IfNotPresent` |
 | `imagePullSecrets` | Names of image pull secrets to use | `dockerhub` |
 | `replicas` | The number of replicas to run for the Crossplane pods | `1` |
 | `deploymentStrategy` | The deployment strategy for the Crossplane and RBAC Manager (if enabled) pods | `RollingUpdate` |
@@ -80,8 +80,8 @@ and their default values.
 | `resourcesCrossplane.limits.memory` | Memory resource limits for Crossplane | `512Mi` |
 | `resourcesCrossplane.requests.cpu` | CPU resource requests for Crossplane | `100m` |
 | `resourcesCrossplane.requests.memory` | Memory resource requests for Crossplane | `256Mi` |
-| `securityContextCrossplane.runAsUser` | Run as user for Crossplane | `2000` |
-| `securityContextCrossplane.runAsGroup` | Run as group for Crossplane | `2000` |
+| `securityContextCrossplane.runAsUser` | Run as user for Crossplane | `65532` |
+| `securityContextCrossplane.runAsGroup` | Run as group for Crossplane | `65532` |
 | `securityContextCrossplane.allowPrivilegeEscalation` | Allow privilege escalation for Crossplane | `false` |
 | `securityContextCrossplane.readOnlyRootFilesystem` | ReadOnly root filesystem for Crossplane | `true` |
 | `provider.packages` | The list of Provider packages to install together with Crossplane | `[]` |
@@ -94,6 +94,8 @@ and their default values.
 | `resourcesRBACManager.limits.memory` | Memory resource limits for RBAC Manager | `512Mi` |
 | `resourcesRBACManager.requests.cpu` | CPU resource requests for RBAC Manager | `100m` |
 | `resourcesRBACManager.requests.memory` | Memory resource requests for RBAC Manager | `256Mi` |
+| `securityContextRBACManager.runAsUser` | Run as user for RBAC Manager | `65532` |
+| `securityContextRBACManager.runAsGroup` | Run as group for RBAC Manager | `65532` |
 | `securityContextRBACManager.allowPrivilegeEscalation` | Allow privilege escalation for RBAC Manager | `false` |
 | `securityContextRBACManager.readOnlyRootFilesystem` | ReadOnly root filesystem for RBAC Manager | `true` |
 | `rbacManager.affinity` | Enable affinity for RBAC Managers pod | `{}` |
@@ -103,9 +105,10 @@ and their default values.
 | `rbacManager.leaderElection` | Enable leader election for RBAC Managers pod | `true` |
 | `rbacManager.managementPolicy`| The extent to which the RBAC manager will manage permissions. `All` indicates to manage all Crossplane controller and user roles. `Basic` indicates to only manage Crossplane controller roles and the `crossplane-admin`, `crossplane-edit`, and `crossplane-view` user roles. | `All` |
 | `rbacManager.tolerations` | Enable tolerations for RBAC Managers pod | `{}` |
-| `alpha.oam.enabled` | Deploy the `crossplane/oam-kubernetes-runtime` Helm chart | `false` |
+| `rbacManager.skipAggregatedClusterRoles` | Opt out of deploying aggregated ClusterRoles | `false` |
 | `metrics.enabled` | Expose Crossplane and RBAC Manager metrics endpoint | `false` |
-| `provider.packages` | The list of Provider packages to install together with Crossplane | `[]` |
+| `extraEnvVarsCrossplane` | List of extra environment variables to set in the crossplane deployment. Any `.` in variable names will be replaced with `_` (example: `SAMPLE.KEY=value1` becomes `SAMPLE_KEY=value1`). | `{}` |
+| `extraEnvVarsRBACManager` | List of extra environment variables to set in the crossplane rbac manager deployment. Any `.` in variable names will be replaced with `_` (example: `SAMPLE.KEY=value1` becomes `SAMPLE_KEY=value1`). | `{}` |
 
 ### Command Line
 

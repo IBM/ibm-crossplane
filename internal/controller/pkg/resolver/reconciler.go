@@ -37,7 +37,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 
 	v1 "github.com/crossplane/crossplane/apis/pkg/v1"
-	"github.com/crossplane/crossplane/apis/pkg/v1alpha1"
+	"github.com/crossplane/crossplane/apis/pkg/v1beta1"
 	"github.com/crossplane/crossplane/internal/dag"
 	"github.com/crossplane/crossplane/internal/xpkg"
 )
@@ -55,6 +55,7 @@ const (
 
 	errGetLock              = "cannot get package lock"
 	errAddFinalizer         = "cannot add lock finalizer"
+	errRemoveFinalizer      = "cannot remove lock finalizer"
 	errBuildDAG             = "cannot build DAG"
 	errSortDAG              = "cannot sort DAG"
 	errMissingDependencyFmt = "missing package (%s) is not a dependency"
@@ -117,7 +118,7 @@ type Reconciler struct {
 
 // Setup adds a controller that reconciles the Lock.
 func Setup(mgr ctrl.Manager, l logging.Logger, namespace string) error {
-	name := "packages/" + strings.ToLower(v1alpha1.LockGroupKind)
+	name := "packages/" + strings.ToLower(v1beta1.LockGroupKind)
 
 	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
@@ -132,7 +133,7 @@ func Setup(mgr ctrl.Manager, l logging.Logger, namespace string) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		For(&v1alpha1.Lock{}).
+		For(&v1beta1.Lock{}).
 		Owns(&v1.ConfigurationRevision{}).
 		Owns(&v1.ProviderRevision{}).
 		Complete(r)
@@ -164,7 +165,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
-	lock := &v1alpha1.Lock{}
+	lock := &v1beta1.Lock{}
 	if err := r.client.Get(ctx, req.NamespacedName, lock); err != nil {
 		// There's no need to requeue if we no longer exist. Otherwise we'll be
 		// requeued implicitly because we return an error.
@@ -172,9 +173,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetLock)
 	}
 
-	// NOTE(hasheddan): we add a finalizer and never remove it to guard against
-	// a user accidentally deleting the lock, which should never be done.
-	// Consider instead recreating the lock if it is not present.
+	// If no packages exist in Lock then we remove finalizer and wait until a
+	// package is added to reconcile again. This allows for cleanup of the Lock
+	// when uninstalling Crossplane after all packages have already been
+	// uninstalled.
+	if len(lock.Packages) == 0 {
+		if err := r.lock.RemoveFinalizer(ctx, lock); err != nil {
+			log.Debug(errRemoveFinalizer, "error", err)
+			return reconcile.Result{RequeueAfter: shortWait}, nil
+		}
+		return reconcile.Result{}, nil
+	}
+
 	if err := r.lock.AddFinalizer(ctx, lock); err != nil {
 		log.Debug(errAddFinalizer, "error", err)
 		return reconcile.Result{RequeueAfter: shortWait}, nil
@@ -187,7 +197,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	)
 
 	dag := r.newDag()
-	implied, err := dag.Init(v1alpha1.ToNodes(lock.Packages...))
+	implied, err := dag.Init(v1beta1.ToNodes(lock.Packages...))
 	if err != nil {
 		return reconcile.Result{}, errors.Wrap(err, errBuildDAG)
 	}
@@ -207,7 +217,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// modifies the Lock. We only create the first implied node as we will be
 	// requeued when it adds itself to the Lock, at which point we will check
 	// for missing nodes again.
-	dep, ok := implied[0].(*v1alpha1.Dependency)
+	dep, ok := implied[0].(*v1beta1.Dependency)
 	if !ok {
 		log.Debug(errInvalidDependency, "error", errors.Errorf(errMissingDependencyFmt, dep.Identifier()))
 		return reconcile.Result{}, nil
@@ -259,9 +269,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	var pack v1.Package
 	switch dep.Type {
-	case v1alpha1.ConfigurationPackageType:
+	case v1beta1.ConfigurationPackageType:
 		pack = &v1.Configuration{}
-	case v1alpha1.ProviderPackageType:
+	case v1beta1.ProviderPackageType:
 		pack = &v1.Provider{}
 	default:
 		log.Debug(errInvalidPackageType)

@@ -51,6 +51,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 	"github.com/crossplane/crossplane-runtime/pkg/resource/unstructured/composed"
+
 	v1 "github.com/crossplane/crossplane/apis/apiextensions/v1"
 	"github.com/crossplane/crossplane/internal/xcrd"
 )
@@ -196,15 +197,15 @@ func AssociateByOrder(t []v1.ComposedTemplate, r []corev1.ObjectReference) []Tem
 
 // A CompositionTemplateAssociator returns an array of template associations.
 type CompositionTemplateAssociator interface {
-	AssociateTemplates(context.Context, resource.Composite, *v1.Composition) ([]TemplateAssociation, error)
+	AssociateTemplates(context.Context, resource.Composite, []v1.ComposedTemplate) ([]TemplateAssociation, error)
 }
 
 // A CompositionTemplateAssociatorFn returns an array of template associations.
-type CompositionTemplateAssociatorFn func(context.Context, resource.Composite, *v1.Composition) ([]TemplateAssociation, error)
+type CompositionTemplateAssociatorFn func(context.Context, resource.Composite, []v1.ComposedTemplate) ([]TemplateAssociation, error)
 
 // AssociateTemplates with composed resources.
-func (fn CompositionTemplateAssociatorFn) AssociateTemplates(ctx context.Context, cr resource.Composite, comp *v1.Composition) ([]TemplateAssociation, error) {
-	return fn(ctx, cr, comp)
+func (fn CompositionTemplateAssociatorFn) AssociateTemplates(ctx context.Context, cr resource.Composite, ct []v1.ComposedTemplate) ([]TemplateAssociation, error) {
+	return fn(ctx, cr, ct)
 }
 
 // A GarbageCollectingAssociator associates a Composition's resource templates
@@ -225,27 +226,31 @@ func NewGarbageCollectingAssociator(c client.Client) *GarbageCollectingAssociato
 }
 
 // AssociateTemplates with composed resources.
-func (a *GarbageCollectingAssociator) AssociateTemplates(ctx context.Context, cr resource.Composite, comp *v1.Composition) ([]TemplateAssociation, error) { //nolint:gocyclo
+func (a *GarbageCollectingAssociator) AssociateTemplates(ctx context.Context, cr resource.Composite, ct []v1.ComposedTemplate) ([]TemplateAssociation, error) { //nolint:gocyclo
 	// NOTE(negz): This method is a little over our complexity goal. Be wary of
 	// making it more complex.
 
 	templates := map[string]int{}
-	for i, t := range comp.Spec.Resources {
+	for i, t := range ct {
 		if t.Name == nil {
 			// If our templates aren't named we fall back to assuming that the
 			// existing resource reference array (if any) already matches the
 			// order of our resource template array.
-			return AssociateByOrder(comp.Spec.Resources, cr.GetResourceReferences()), nil
+			return AssociateByOrder(ct, cr.GetResourceReferences()), nil
 		}
 		templates[*t.Name] = i
 	}
 
-	tas := make([]TemplateAssociation, len(comp.Spec.Resources))
-	for i := range comp.Spec.Resources {
-		tas[i] = TemplateAssociation{Template: comp.Spec.Resources[i]}
+	tas := make([]TemplateAssociation, len(ct))
+	for i := range ct {
+		tas[i] = TemplateAssociation{Template: ct[i]}
 	}
 
 	for _, ref := range cr.GetResourceReferences() {
+		// If reference does not have a name then we haven't rendered it yet.
+		if ref.Name == "" {
+			continue
+		}
 		cd := composed.New(composed.FromReference(ref))
 		nn := types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}
 		err := a.client.Get(ctx, nn, cd)
@@ -268,7 +273,7 @@ func (a *GarbageCollectingAssociator) AssociateTemplates(ctx context.Context, cr
 			// reference array already matches the order of our resource
 			// template array. Existing composed resources should be annotated
 			// at render time with the name of the template used to create them.
-			return AssociateByOrder(comp.Spec.Resources, cr.GetResourceReferences()), nil
+			return AssociateByOrder(ct, cr.GetResourceReferences()), nil
 		}
 
 		// Inject the reference to this existing resource into the references
@@ -347,6 +352,20 @@ func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, c
 		return errors.New(errNamePrefix)
 	}
 
+	// Unmarshalling the template will overwrite any existing fields, so we must
+	// restore the existing name, if any. We also set generate name in case we
+	// haven't yet named this composed resource.
+	cd.SetGenerateName(cp.GetLabels()[xcrd.LabelKeyNamePrefixForComposed] + "-")
+	cd.SetName(name)
+	cd.SetNamespace(namespace)
+
+	for i := range t.Patches {
+		if err := t.Patches[i].Apply(cp, cd, patchTypesFromXR()...); err != nil {
+			return errors.Wrapf(err, errFmtPatch, i)
+		}
+	}
+
+	// Composed labels and annotations should be rendered after patches are applied
 	meta.AddLabels(cd, map[string]string{
 		xcrd.LabelKeyNamePrefixForComposed: cp.GetLabels()[xcrd.LabelKeyNamePrefixForComposed],
 		xcrd.LabelKeyClaimName:             cp.GetLabels()[xcrd.LabelKeyClaimName],
@@ -355,20 +374,6 @@ func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, c
 
 	if t.Name != nil {
 		SetCompositionResourceName(cd, *t.Name)
-	}
-
-	// Unmarshalling the template will overwrite any existing fields, so we must
-	// restore the existing name, if any. We also set generate name in case we
-	// haven't yet named this composed resource.
-	cd.SetGenerateName(cp.GetLabels()[xcrd.LabelKeyNamePrefixForComposed] + "-")
-	cd.SetName(name)
-	cd.SetNamespace(namespace)
-
-	onlyPatches := []v1.PatchType{v1.PatchTypeFromCompositeFieldPath}
-	for i, p := range t.Patches {
-		if err := p.Apply(cp, cd, onlyPatches...); err != nil {
-			return errors.Wrapf(err, errFmtPatch, i)
-		}
 	}
 
 	// We do this last to ensure that a Composition cannot influence owner (and
@@ -397,9 +402,8 @@ func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, c
 // RenderComposite renders the supplied composite resource using the supplied composed
 // resource and template.
 func RenderComposite(_ context.Context, cp resource.Composite, cd resource.Composed, t v1.ComposedTemplate) error {
-	onlyPatches := []v1.PatchType{v1.PatchTypeToCompositeFieldPath}
 	for i, p := range t.Patches {
-		if err := p.Apply(cp, cd, onlyPatches...); err != nil {
+		if err := p.Apply(cp, cd, patchTypesToXR()...); err != nil {
 			return errors.Wrapf(err, errFmtPatch, i)
 		}
 	}
@@ -428,14 +432,7 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 		// that we'll propagate any connection details during a future
 		// iteration.
 		s := &corev1.Secret{}
-
-		// IBM Patch: Default the connection secret namespace to the composed resource namespace
-		n := sref.Namespace
-		if n == "" {
-			n = cd.GetNamespace()
-		}
-
-		nn := types.NamespacedName{Namespace: n, Name: sref.Name}
+		nn := types.NamespacedName{Namespace: sref.Namespace, Name: sref.Name}
 		if err := cdf.client.Get(ctx, nn, s); client.IgnoreNotFound(err) != nil {
 			return nil, errors.Wrap(err, errGetSecret)
 		}

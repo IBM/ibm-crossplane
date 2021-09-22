@@ -92,7 +92,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/definition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/definition.yaml
 ```
 
 > You might notice that the XRD we created specifies both "names" and "claim
@@ -147,7 +147,7 @@ spec:
             dbInstanceClass: db.t2.small
             masterUsername: masteruser
             engine: postgres
-            engineVersion: "9.6"
+            engineVersion: "12"
             skipFinalSnapshotBeforeDeletion: true
             publiclyAccessible: true
           writeConnectionSecretToRef:
@@ -169,7 +169,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/aws/composition.yaml
 ```
 
 </div>
@@ -247,7 +247,7 @@ spec:
             vpcIdSelector:
               matchControllerRef: true
             availabilityZone: us-east-1c
-    - name: subnet-c
+    - name: dbsubnetgroup
       base:
         apiVersion: database.aws.crossplane.io/v1beta1
         kind: DBSubnetGroup
@@ -343,7 +343,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws-with-vpc/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/aws-with-vpc/composition.yaml
 ```
 
 </div>
@@ -399,7 +399,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/gcp/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/gcp/composition.yaml
 ```
 
 </div>
@@ -485,7 +485,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/azure/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/azure/composition.yaml
 ```
 
 </div>
@@ -535,7 +535,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/alibaba/composition.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/alibaba/composition.yaml
 ```
 
 </div>
@@ -578,7 +578,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws/crossplane.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/aws/crossplane.yaml
 
 kubectl crossplane build configuration
 ```
@@ -591,7 +591,7 @@ you may specify a specific package by using the `-f` flag.
 ```console
 # Set this to the Docker Hub username or OCI registry you wish to use.
 REG=my-package-repo
-kubectl crossplane push configuration ${REG}/getting-started-with-aws:v1.1.0
+kubectl crossplane push configuration ${REG}/getting-started-with-aws:master
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -614,11 +614,11 @@ spec:
     version: ">=v1.0.0-0"
   dependsOn:
     - provider: crossplane/provider-aws
-      version: ">=v0.14.0"
+      version: "v0.16.0"
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/aws-with-vpc/crossplane.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/aws-with-vpc/crossplane.yaml
 
 kubectl crossplane build configuration
 ```
@@ -631,7 +631,7 @@ you may specify a specific package by using the `-f` flag.
 ```console
 # Set this to the Docker Hub username or OCI registry you wish to use.
 REG=my-package-repo
-kubectl crossplane push configuration ${REG}/getting-started-with-aws-with-vpc:v1.1.0
+kubectl crossplane push configuration ${REG}/getting-started-with-aws-with-vpc:master
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -657,7 +657,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/gcp/crossplane.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/gcp/crossplane.yaml
 
 kubectl crossplane build configuration
 ```
@@ -670,7 +670,7 @@ you may specify a specific package by using the `-f` flag.
 ```console
 # Set this to the Docker Hub username or OCI registry you wish to use.
 REG=my-package-repo
-kubectl crossplane push configuration ${REG}/getting-started-with-gcp:v1.1.0
+kubectl crossplane push configuration ${REG}/getting-started-with-gcp:master
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the
@@ -696,7 +696,7 @@ spec:
 ```
 
 ```console
-curl -OL https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/package/azure/crossplane.yaml
+curl -OL https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/package/azure/crossplane.yaml
 
 kubectl crossplane build configuration
 ```
@@ -709,7 +709,7 @@ you may specify a specific package by using the `-f` flag.
 ```console
 # Set this to the Docker Hub username or OCI registry you wish to use.
 REG=my-package-repo
-kubectl crossplane push configuration ${REG}/getting-started-with-azure:v1.1.0
+kubectl crossplane push configuration ${REG}/getting-started-with-azure:master
 ```
 
 > Note that the Crossplane CLI will not follow symbolic links for files in the

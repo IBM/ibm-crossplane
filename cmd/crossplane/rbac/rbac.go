@@ -17,16 +17,16 @@ limitations under the License.
 package rbac
 
 import (
-	"fmt"
+	"strings"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/pkg/errors"
-	"gopkg.in/alecthomas/kingpin.v2"
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
-	"github.com/crossplane/crossplane/apis"
+
 	"github.com/crossplane/crossplane/internal/controller/rbac"
 )
 
@@ -36,55 +36,59 @@ const (
 	ManagementPolicyBasic = string(rbac.ManagementPolicyBasic)
 )
 
-// Command configuration for the RBAC manager.
-type Command struct {
-	Name                string
-	Sync                time.Duration
-	LeaderElection      bool
-	ManagementPolicy    string
-	ProviderClusterRole string
+// KongVars represent the kong variables associated with the CLI parser
+// required for the RBAC enum interpolation.
+var KongVars = kong.Vars{
+	"rbac_manage_default_var": ManagementPolicyAll,
+	"rbac_manage_enum_var": strings.Join(
+		[]string{
+			ManagementPolicyAll,
+			ManagementPolicyBasic,
+		},
+		", "),
 }
 
-// FromKingpin produces the RBAC manager command from a Kingpin command.
-func FromKingpin(cmd *kingpin.CmdClause) *Command {
-	c := &Command{Name: cmd.FullCommand()}
-	cmd.Flag("sync", "Controller manager sync period duration such as 300ms, 1.5h or 2h45m").Short('s').Default("1h").DurationVar(&c.Sync)
-	cmd.Flag("manage", "RBAC management policy.").Short('m').Default(ManagementPolicyAll).EnumVar(&c.ManagementPolicy, ManagementPolicyAll, ManagementPolicyBasic)
-	cmd.Flag("provider-clusterrole", "A ClusterRole enumerating the permissions provider packages may request.").StringVar(&c.ProviderClusterRole)
-	cmd.Flag("leader-election", "Use leader election for the conroller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").BoolVar(&c.LeaderElection)
+// Command runs the crossplane RBAC controllers
+type Command struct {
+	Start startCommand `cmd:"" help:"Start Crossplane RBAC controllers."`
+	Init  initCommand  `cmd:"" help:"Initialize RBAC Manager."`
+}
 
-	return c
+// Run is the no-op method required for kong call tree.
+// Kong requires each node in the calling path to have associated
+// Run method.
+func (c *Command) Run() error {
+	return nil
+}
+
+type startCommand struct {
+	ProviderClusterRole string        `name:"provider-clusterrole" help:"A ClusterRole enumerating the permissions provider packages may request."`
+	LeaderElection      bool          `name:"leader-election" short:"l" help:"Use leader election for the conroller manager." env:"LEADER_ELECTION"`
+	Sync                time.Duration `short:"s" help:"Controller manager sync period duration such as 300ms, 1.5h or 2h45m" default:"1h"`
+	ManagementPolicy    string        `name:"manage" short:"m" help:"RBAC management policy." default:"${rbac_manage_default_var}" enum:"${rbac_manage_enum_var}"`
 }
 
 // Run the RBAC manager.
-func (c *Command) Run(log logging.Logger) error {
-	log.Debug("Starting", "sync-period", c.Sync.String(), "policy", c.ManagementPolicy)
-
+func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		return errors.Wrap(err, "Cannot get config")
+		return errors.Wrap(err, "cannot get config")
 	}
 
+	log.Debug("Starting", "sync-period", c.Sync.String(), "policy", c.ManagementPolicy)
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:           s,
 		LeaderElection:   c.LeaderElection,
-		LeaderElectionID: fmt.Sprintf("crossplane-leader-election-%s", c.Name),
+		LeaderElectionID: "crossplane-leader-election-rbac",
 		SyncPeriod:       &c.Sync,
 	})
 	if err != nil {
-		return errors.Wrap(err, "Cannot create manager")
-	}
-
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		return errors.Wrap(err, "Cannot add core Crossplane APIs to scheme")
-	}
-
-	if err := extv1.AddToScheme(mgr.GetScheme()); err != nil {
-		return errors.Wrap(err, "Cannot add Kubernetes API extensions to scheme")
+		return errors.Wrap(err, "cannot create manager")
 	}
 
 	if err := rbac.Setup(mgr, log, rbac.ManagementPolicy(c.ManagementPolicy), c.ProviderClusterRole); err != nil {
-		return errors.Wrap(err, "Cannot add RBAC controllers to manager")
+		return errors.Wrap(err, "cannot add RBAC controllers to manager")
 	}
 
-	return errors.Wrap(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
+	return errors.Wrap(mgr.Start(ctrl.SetupSignalHandler()), "cannot start controller manager")
 }

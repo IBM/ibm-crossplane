@@ -50,13 +50,16 @@ GO_TEST_PARALLEL := $(shell echo $$(( $(NPROCS) / 2 )))
 GO_STATIC_PACKAGES = $(GO_PROJECT)/cmd/crossplane $(GO_PROJECT)/cmd/crank
 GO_LDFLAGS += -X $(GO_PROJECT)/internal/version.version=$(VERSION)
 GO_SUBDIRS += cmd internal apis
+# disables credential providers for pulling package images
+GO_TAGS += disable_gcp disable_aws disable_azure
 GO111MODULE = on
 -include build/makelib/golang.mk
 
 # ====================================================================================
 # Setup Kubernetes tools
 
-HELM_VERSION=v2.17.0
+USE_HELM3 = true
+HELM3_VERSION = v3.6.3
 -include build/makelib/k8s_tools.mk
 
 HOSTARCH := $(shell uname -m | sed 's/x86_64/amd64/')
@@ -124,11 +127,15 @@ fallthrough: submodules
 manifests:
 	@$(WARN) Deprecated. Please run make generate instead.
 
-generate: $(HELM) $(KUSTOMIZE) go.vendor go.generate gen-kustomize-crds gen-install-doc
-	@$(OK) Finished vendoring and generating
+CRD_DIR = cluster/crds
 
+crds.clean:
+	@$(INFO) cleaning generated CRDs
+	@find $(CRD_DIR) -name '*.yaml' -exec sed -i.sed -e '1,2d' {} \; || $(FAIL)
+	@find $(CRD_DIR) -name '*.yaml.sed' -delete || $(FAIL)
+	@$(OK) cleaned generated CRDs
 
-CRD_DIR = cluster/charts/crossplane/crds
+generate.run: crds.clean gen-kustomize-crds gen-install-doc
 
 gen-install-doc:
 	@$(INFO) Generating install documentation from Helm chart
@@ -155,16 +162,6 @@ cobertura:
 		grep -v zz_generated.deepcopy | \
 		$(GOCOVER_COBERTURA) > $(GO_TEST_OUTPUT)/cobertura-coverage.xml
 
-# Ensure a PR is ready for review.
-reviewable: generate lint
-	@go mod tidy
-
-# Ensure branch is clean.
-check-diff: reviewable
-	@$(INFO) checking that branch is clean
-	@test -z "$$(git status --porcelain)" || $(FAIL)
-	@$(OK) branch is clean
-
 # integration tests
 e2e.run: test-integration
 
@@ -181,11 +178,25 @@ submodules:
 
 # Install CRDs into a cluster. This is for convenience.
 install-crds: $(KUBECTL) reviewable
-	$(KUBECTL) apply -f cluster/charts/crossplane-types/crds/
+	$(KUBECTL) apply -f $(CRD_DIR)
 
 # Uninstall CRDs from a cluster. This is for convenience.
 uninstall-crds:
-	$(KUBECTL) delete -f cluster/charts/crossplane-types/crds/
+	$(KUBECTL) delete -f $(CRD_DIR)
+
+# Compile e2e tests.
+# TODO(hasheddan): integrate this functionality into build submodule. The build
+# submodule currently distinguishes tests and integration tests, but it only
+# builds tests and does not support passing build tags only to the test build.
+# Note that we are not publishing the builds that come from this step.
+e2e-tests-compile:
+	@$(INFO) Checking that e2e tests compile
+	@$(GO) test -c -o $(WORK_DIR)/e2e/$(PLATFORM)/apiextensions.test ./test/e2e/apiextensions --tags=e2e
+	@$(GO) test -c -o $(WORK_DIR)/e2e/$(PLATFORM)/pkg.test ./test/e2e/pkg --tags=e2e
+	@$(OK) Verified e2e tests compile
+
+# Compile e2e tests for each platform.
+build.code.platform: e2e-tests-compile
 
 # This is for running out-of-cluster locally, and is for convenience. Running
 # this make target will print out the command which was used. For more control,
@@ -193,9 +204,9 @@ uninstall-crds:
 run: go.build
 	@$(INFO) Running Crossplane locally out-of-cluster . . .
 	@# To see other arguments that can be provided, run the command with --help instead
-	$(GO_OUT_DIR)/$(PROJECT_NAME) --debug
+	$(GO_OUT_DIR)/$(PROJECT_NAME) core start --debug
 
-.PHONY: manifests cobertura reviewable submodules fallthrough test-integration run install-crds uninstall-crds gen-kustomize-crds gen-install-doc
+.PHONY: manifests cobertura submodules fallthrough test-integration run install-crds uninstall-crds gen-kustomize-crds gen-install-doc e2e-tests-compile
 
 # ====================================================================================
 # Special Targets
@@ -203,7 +214,6 @@ run: go.build
 define CROSSPLANE_MAKE_HELP
 Crossplane Targets:
     cobertura          Generate a coverage report for cobertura applying exclusions on generated files.
-    reviewable         Ensure a PR is ready for review.
     submodules         Update the submodules, such as the common build scripts.
     run                Run crossplane locally, out-of-cluster. Useful for development.
 

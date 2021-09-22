@@ -28,141 +28,62 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
-	"github.com/crossplane/crossplane-runtime/pkg/resource/unstructured/claim"
 )
 
 // Error strings.
 const (
-	errUpdateClaim           = "cannot update composite resource claim"
-	errUpdateComposite       = "cannot update composite resource"
-	errBindClaimConflict     = "cannot bind claim that references a different composite resource"
-	errBindCompositeConflict = "cannot bind composite resource that references a different claim"
-	errGetSecret             = "cannot get composite resource's connection secret"
-	errSecretConflict        = "cannot establish control of existing connection secret"
-	errCreateOrUpdateSecret  = "cannot create or update connection secret"
+	errUpdateClaim          = "cannot update composite resource claim"
+	errBindClaimConflict    = "cannot bind claim that references a different composite resource"
+	errGetSecret            = "cannot get composite resource's connection secret"
+	errSecretConflict       = "cannot establish control of existing connection secret"
+	errCreateOrUpdateSecret = "cannot create or update connection secret"
 )
 
 // An APIBinder binds claims to composites by updating them in a Kubernetes API
 // server.
 type APIBinder struct {
 	client client.Client
-	typer  runtime.ObjectTyper
 }
 
 // NewAPIBinder returns a new APIBinder.
-func NewAPIBinder(c client.Client, t runtime.ObjectTyper) *APIBinder {
-	return &APIBinder{client: c, typer: t}
+func NewAPIBinder(c client.Client) *APIBinder {
+	return &APIBinder{client: c}
 }
 
 // Bind the supplied claim to the supplied composite.
 func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp resource.Composite) error {
-	// IBM Patch: Move resourceRef to status
-	existing := GetResourceReference(cm)
-	proposed := meta.ReferenceTo(cp, resource.MustGetKind(cp, a.typer))
-	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
+	existing := cm.GetResourceReference()
+	proposed := meta.ReferenceTo(cp, cp.GetObjectKind().GroupVersionKind())
+	equal := cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID"))
+
+	// We refuse to 're-bind' a claim that is already bound to a different
+	// composite resource.
+	if existing != nil && !equal {
 		return errors.New(errBindClaimConflict)
 	}
 
-	// Propagate the actual external name back from the composite to the claim.
-	meta.SetExternalName(cm, meta.GetExternalName(cp))
-
-	// We set the claim's resource reference first in order to reduce the chance
-	// of leaking newly created composite resources. We want as few calls that
-	// could fail and trigger a requeue between composite creation and reference
-	// persistence as possible.
-	// IBM Patch: Move resourceRef to status
-	if err := SetResourceRef(ctx, a.client, cm, proposed); err != nil {
-		return err
-	}
-	if err := a.client.Update(ctx, cm); err != nil {
-		return errors.Wrap(err, errUpdateClaim)
-	}
-
-	existing = cp.GetClaimReference()
-	proposed = meta.ReferenceTo(cm, resource.MustGetKind(cm, a.typer))
-	if existing != nil && !cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID")) {
-		return errors.New(errBindCompositeConflict)
-	}
-
-	cp.SetClaimReference(proposed)
-	return errors.Wrap(a.client.Update(ctx, cp), errUpdateComposite)
-}
-
-// IBM Patch: Move resourceRef to status
-
-// GetResourceReference Patch method which read data from status instead of spec
-func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
-	out := &corev1.ObjectReference{}
-	data, ok := cm.(*claim.Unstructured)
-	if data == nil || !ok {
-		// back to standard inside one test where we can not change mock because of different repo
-		return cm.GetResourceReference()
-	}
-	if err := fieldpath.Pave(data.Object).GetValueInto("status.resourceRef", out); err != nil {
-		// back to standard inside one test where we can not change mock because of different repo
-		if err := fieldpath.Pave(data.Object).GetValueInto("spec.resourceRef", out); err != nil {
-			return nil
-		}
-		return out
-	}
-	if out.Name == "" {
-		return nil
-	}
-	return out
-}
-
-// SetResourceRef - you can set resourceRef or you can remove it , if you set nil
-func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
-	data, ok := cm.(*claim.Unstructured)
-	if !ok {
+	// There's no need to call update if the claim already references this
+	// composite resource.
+	if equal {
 		return nil
 	}
 
-	// initailize status if we need to set it and it is not exists
-	if data.Object["status"] == nil && resourceRef != nil {
-		data.Object["status"] = map[string]interface{}{
-			"resourceRef": resourceRef,
-		}
-	}
-
-	iStatus, err := fieldpath.Pave(data.Object).GetValue("status")
-	if err != nil {
-		return errors.New(errUnsupportedClaimSpec)
-	}
-
-	status, ok := iStatus.(map[string]interface{})
-	if !ok {
-		return errors.New(errUnsupportedClaimSpec)
-	}
-
-	if resourceRef != nil {
-		status["resourceRef"] = resourceRef
-	} else {
-		delete(status, "resourceRef")
-	}
-	if err := c.Status().Update(ctx, cm); err != nil {
-		return errors.Wrap(err, errUpdateClaim)
-	}
-	return nil
+	cm.SetResourceReference(proposed)
+	return errors.Wrap(a.client.Update(ctx, cm), errUpdateClaim)
 }
-
-// IBM Patch End: Move resourceRef to status
 
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.
 type APIConnectionPropagator struct {
 	client resource.ClientApplicator
-	typer  runtime.ObjectTyper
 }
 
 // NewAPIConnectionPropagator returns a new APIConnectionPropagator.
-func NewAPIConnectionPropagator(c client.Client, t runtime.ObjectTyper) *APIConnectionPropagator {
+func NewAPIConnectionPropagator(c client.Client) *APIConnectionPropagator {
 	return &APIConnectionPropagator{
 		client: resource.ClientApplicator{Client: c, Applicator: resource.NewAPIUpdatingApplicator(c)},
-		typer:  t,
 	}
 }
 
@@ -189,7 +110,7 @@ func (a *APIConnectionPropagator) PropagateConnection(ctx context.Context, to re
 		return false, errors.New(errSecretConflict)
 	}
 
-	ts := resource.LocalConnectionSecretFor(to, resource.MustGetKind(to, a.typer))
+	ts := resource.LocalConnectionSecretFor(to, to.GetObjectKind().GroupVersionKind())
 	ts.Data = fs.Data
 
 	err := a.client.Apply(ctx, ts,

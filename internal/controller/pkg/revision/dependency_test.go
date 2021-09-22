@@ -22,7 +22,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,7 +32,7 @@ import (
 
 	pkgmetav1 "github.com/crossplane/crossplane/apis/pkg/meta/v1"
 	v1 "github.com/crossplane/crossplane/apis/pkg/v1"
-	"github.com/crossplane/crossplane/apis/pkg/v1alpha1"
+	"github.com/crossplane/crossplane/apis/pkg/v1beta1"
 	"github.com/crossplane/crossplane/internal/dag"
 	dagfake "github.com/crossplane/crossplane/internal/dag/fake"
 )
@@ -79,7 +81,44 @@ func TestResolve(t *testing.T) {
 				meta: &pkgmetav1.Configuration{},
 			},
 			want: want{
-				err: errors.Wrap(errBoom, errGetLock),
+				err: errors.Wrap(errBoom, errGetOrCreateLock),
+			},
+		},
+		"ErrCreateLock": {
+			reason: "Should return error if we cannot get or create lock.",
+			args: args{
+				dep: &PackageDependencyManager{
+					client: &test.MockClient{
+						MockGet:    test.NewMockGetFn(kerrors.NewNotFound(schema.GroupResource{}, "")),
+						MockCreate: test.NewMockCreateFn(errBoom),
+					},
+				},
+				meta: &pkgmetav1.Configuration{},
+				pr: &v1.ConfigurationRevision{
+					Spec: v1.PackageRevisionSpec{
+						DesiredState: v1.PackageRevisionActive,
+					},
+				},
+			},
+			want: want{
+				err: errors.Wrap(errBoom, errGetOrCreateLock),
+			},
+		},
+		"SuccessfulInactiveNoLock": {
+			reason: "Should not return error if we are inactive and lock does not exist.",
+			args: args{
+				dep: &PackageDependencyManager{
+					client: &test.MockClient{
+						MockGet:    test.NewMockGetFn(kerrors.NewNotFound(schema.GroupResource{}, "")),
+						MockCreate: test.NewMockCreateFn(errBoom),
+					},
+				},
+				meta: &pkgmetav1.Configuration{},
+				pr: &v1.ConfigurationRevision{
+					Spec: v1.PackageRevisionSpec{
+						DesiredState: v1.PackageRevisionInactive,
+					},
+				},
 			},
 		},
 		"ErrBuildDag": {
@@ -87,7 +126,8 @@ func TestResolve(t *testing.T) {
 			args: args{
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
-						MockGet: test.NewMockGetFn(nil),
+						MockGet:    test.NewMockGetFn(kerrors.NewNotFound(schema.GroupResource{}, "")),
+						MockCreate: test.NewMockCreateFn(nil),
 					},
 					newDag: func() dag.DAG {
 						return &dagfake.MockDag{
@@ -113,7 +153,8 @@ func TestResolve(t *testing.T) {
 			args: args{
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
-						MockGet: test.NewMockGetFn(nil),
+						MockGet:    test.NewMockGetFn(kerrors.NewNotFound(schema.GroupResource{}, "")),
+						MockCreate: test.NewMockCreateFn(nil),
 					},
 					newDag: func() dag.DAG {
 						return &dagfake.MockDag{
@@ -141,8 +182,8 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a:v0.0.1",
 								},
@@ -182,8 +223,8 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a",
 								},
@@ -223,8 +264,8 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a",
 								},
@@ -264,18 +305,18 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-1",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 										{
 											Package: "not-here-2",
-											Type:    v1alpha1.ConfigurationPackageType,
+											Type:    v1beta1.ConfigurationPackageType,
 										},
 									},
 								},
@@ -331,27 +372,27 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-1",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 										{
 											Package: "not-here-2",
-											Type:    v1alpha1.ConfigurationPackageType,
+											Type:    v1beta1.ConfigurationPackageType,
 										},
 									},
 								},
 								{
 									Source: "not-here-1",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-3",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 									},
 								},
@@ -369,19 +410,19 @@ func TestResolve(t *testing.T) {
 									}
 								}
 								return []dag.Node{
-									&v1alpha1.Dependency{
+									&v1beta1.Dependency{
 										Package: "not-here-2",
 									},
-									&v1alpha1.Dependency{
+									&v1beta1.Dependency{
 										Package: "not-here-3",
 									},
 								}, nil
 							},
 							MockTraceNode: func(_ string) (map[string]dag.Node, error) {
 								return map[string]dag.Node{
-									"not-here-1": &v1alpha1.Dependency{},
-									"not-here-2": &v1alpha1.Dependency{},
-									"not-here-3": &v1alpha1.Dependency{},
+									"not-here-1": &v1beta1.Dependency{},
+									"not-here-2": &v1beta1.Dependency{},
+									"not-here-3": &v1beta1.Dependency{},
 								}, nil
 							},
 						}
@@ -420,27 +461,27 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-1",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 										{
 											Package: "not-here-2",
-											Type:    v1alpha1.ConfigurationPackageType,
+											Type:    v1beta1.ConfigurationPackageType,
 										},
 									},
 								},
 								{
 									Source: "not-here-1",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-3",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 									},
 								},
@@ -461,20 +502,20 @@ func TestResolve(t *testing.T) {
 							},
 							MockTraceNode: func(_ string) (map[string]dag.Node, error) {
 								return map[string]dag.Node{
-									"not-here-1": &v1alpha1.Dependency{},
-									"not-here-2": &v1alpha1.Dependency{},
-									"not-here-3": &v1alpha1.Dependency{},
+									"not-here-1": &v1beta1.Dependency{},
+									"not-here-2": &v1beta1.Dependency{},
+									"not-here-3": &v1beta1.Dependency{},
 								}, nil
 							},
 							MockGetNode: func(s string) (dag.Node, error) {
 								if s == "not-here-1" {
-									return &v1alpha1.LockPackage{
+									return &v1beta1.LockPackage{
 										Source:  "not-here-1",
 										Version: "v0.0.1",
 									}, nil
 								}
 								if s == "not-here-2" {
-									return &v1alpha1.LockPackage{
+									return &v1beta1.LockPackage{
 										Source:  "not-here-2",
 										Version: "v0.0.1",
 									}, nil
@@ -520,27 +561,27 @@ func TestResolve(t *testing.T) {
 				dep: &PackageDependencyManager{
 					client: &test.MockClient{
 						MockGet: test.NewMockGetFn(nil, func(obj client.Object) error {
-							l := obj.(*v1alpha1.Lock)
-							l.Packages = []v1alpha1.LockPackage{
+							l := obj.(*v1beta1.Lock)
+							l.Packages = []v1beta1.LockPackage{
 								{
 									Source: "hasheddan/config-nop-a",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-1",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 										{
 											Package: "not-here-2",
-											Type:    v1alpha1.ConfigurationPackageType,
+											Type:    v1beta1.ConfigurationPackageType,
 										},
 									},
 								},
 								{
 									Source: "not-here-1",
-									Dependencies: []v1alpha1.Dependency{
+									Dependencies: []v1beta1.Dependency{
 										{
 											Package: "not-here-3",
-											Type:    v1alpha1.ProviderPackageType,
+											Type:    v1beta1.ProviderPackageType,
 										},
 									},
 								},
@@ -561,20 +602,20 @@ func TestResolve(t *testing.T) {
 							},
 							MockTraceNode: func(_ string) (map[string]dag.Node, error) {
 								return map[string]dag.Node{
-									"not-here-1": &v1alpha1.Dependency{},
-									"not-here-2": &v1alpha1.Dependency{},
-									"not-here-3": &v1alpha1.Dependency{},
+									"not-here-1": &v1beta1.Dependency{},
+									"not-here-2": &v1beta1.Dependency{},
+									"not-here-3": &v1beta1.Dependency{},
 								}, nil
 							},
 							MockGetNode: func(s string) (dag.Node, error) {
 								if s == "not-here-1" {
-									return &v1alpha1.LockPackage{
+									return &v1beta1.LockPackage{
 										Source:  "not-here-1",
 										Version: "v0.20.0",
 									}, nil
 								}
 								if s == "not-here-2" {
-									return &v1alpha1.LockPackage{
+									return &v1beta1.LockPackage{
 										Source:  "not-here-2",
 										Version: "v0.100.1",
 									}, nil

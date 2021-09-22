@@ -38,8 +38,8 @@ projectdir="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
 # get the build environment variables from the special build.vars target in the main makefile
 eval $(make --no-print-directory -C ${projectdir} build.vars)
 
-HOSTARCH="${HOSTARCH:-amd64}"
-BUILD_IMAGE="${BUILD_REGISTRY}/${PROJECT_NAME}-${HOSTARCH}"
+SAFEHOSTARCH="${SAFEHOSTARCH:-amd64}"
+BUILD_IMAGE="${BUILD_REGISTRY}/${PROJECT_NAME}-${SAFEHOSTARCH}"
 
 helm_tag="$(cat ${projectdir}/_output/version)"
 CROSSPLANE_IMAGE="${DOCKER_REGISTRY}/${PROJECT_NAME}:${helm_tag}"
@@ -67,7 +67,7 @@ docker tag "${BUILD_IMAGE}" "${CROSSPLANE_IMAGE}"
 
 echo_step "installing helm package(s) into \"${CROSSPLANE_NAMESPACE}\" namespace"
 "${KUBECTL}" create ns "${CROSSPLANE_NAMESPACE}"
-"${HELM3}" install "${PROJECT_NAME}" --namespace "${CROSSPLANE_NAMESPACE}" "${projectdir}/cluster/charts/${PROJECT_NAME}" --set replicas=2,rbacManager.replicas=2,image.pullPolicy=Never,imagePullSecrets='',alpha.oam.enabled=true
+"${HELM3}" install "${PROJECT_NAME}" --namespace "${CROSSPLANE_NAMESPACE}" "${projectdir}/cluster/charts/${PROJECT_NAME}" --set replicas=2,rbacManager.replicas=2,image.pullPolicy=Never,imagePullSecrets=''
 
 echo_step "waiting for deployment ${PROJECT_NAME} rollout to finish"
 "${KUBECTL}" -n "${CROSSPLANE_NAMESPACE}" rollout status "deploy/${PROJECT_NAME}" --timeout=2m
@@ -83,7 +83,7 @@ echo
 echo -------- deployments
 "${KUBECTL}" -n "${CROSSPLANE_NAMESPACE}" get deployments
 
-MUST_HAVE_DEPLOYMENTS="crossplane crossplane-rbac-manager oam-kubernetes-runtime-crossplane"
+MUST_HAVE_DEPLOYMENTS="crossplane crossplane-rbac-manager"
 for name in $MUST_HAVE_DEPLOYMENTS; do
     echo_sub_step "inspecting deployment '${name}'"
     dep_stat=$("${KUBECTL}" -n "${CROSSPLANE_NAMESPACE}" get deployments/"${name}")

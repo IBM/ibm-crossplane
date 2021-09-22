@@ -17,85 +17,83 @@ limitations under the License.
 package core
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/alecthomas/kong"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"gopkg.in/alecthomas/kingpin.v2"
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
-	"github.com/crossplane/crossplane/apis"
+
 	"github.com/crossplane/crossplane/internal/controller/apiextensions"
 	"github.com/crossplane/crossplane/internal/controller/pkg"
+	"github.com/crossplane/crossplane/internal/feature"
 	"github.com/crossplane/crossplane/internal/xpkg"
 )
 
-// Command configuration for the core Crossplane controllers.
+// Command runs the core crossplane controllers
 type Command struct {
-	Name           string
-	Namespace      string
-	CacheDir       string
-	LeaderElection bool
-	Sync           time.Duration
+	Start startCommand `cmd:"" help:"Start Crossplane controllers."`
+	Init  initCommand  `cmd:"" help:"Make cluster ready for Crossplane controllers."`
 }
 
-// FromKingpin produces the core Crossplane command from a Kingpin command.
-func FromKingpin(cmd *kingpin.CmdClause) *Command {
-	c := &Command{Name: cmd.FullCommand()}
-	cmd.Flag("namespace", "Namespace used to unpack and run packages.").Short('n').Default("crossplane-system").OverrideDefaultFromEnvar("WATCH_NAMESPACE").StringVar(&c.Namespace)
-	cmd.Flag("cache-dir", "Directory used for caching package images.").Short('c').Default("/cache").OverrideDefaultFromEnvar("CACHE_DIR").ExistingDirVar(&c.CacheDir)
-	cmd.Flag("sync", "Controller manager sync period duration such as 300ms, 1.5h or 2h45m").Short('s').Default("1h").DurationVar(&c.Sync)
-	cmd.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").BoolVar(&c.LeaderElection)
-	return c
+// KongVars represent the kong variables associated with the CLI parser
+// required for the Registry default variable interpolation.
+var KongVars = kong.Vars{
+	"default_registry": name.DefaultRegistry,
+}
+
+// Run is the no-op method required for kong call tree
+// Kong requires each node in the calling path to have associated
+// Run method.
+func (c *Command) Run() error {
+	return nil
+}
+
+type startCommand struct {
+	Namespace      string        `short:"n" help:"Namespace used to unpack and run packages." default:"crossplane-system" env:"WATCH_NAMESPACE"`
+	CacheDir       string        `short:"c" help:"Directory used for caching package images." default:"/cache" env:"CACHE_DIR"`
+	LeaderElection bool          `short:"l" help:"Use leader election for the controller manager." default:"false" env:"LEADER_ELECTION"`
+	Registry       string        `short:"r" help:"Default registry used to fetch packages when not specified in tag." default:"${default_registry}" env:"REGISTRY"`
+	Sync           time.Duration `short:"s" help:"Controller manager sync period duration such as 300ms, 1.5h or 2h45m" default:"1h"`
+
+	EnableCompositionRevisions bool `group:"Alpha Features:" help:"Enable support for CompositionRevisions."`
 }
 
 // Run core Crossplane controllers.
-func (c *Command) Run(log logging.Logger) error {
-	log.Debug("Starting", "sync-period", c.Sync.String())
-
+func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return errors.Wrap(err, "Cannot get config")
 	}
+	log.Debug("Starting", "sync-period", c.Sync.String())
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:           s,
 		LeaderElection:   c.LeaderElection,
-		LeaderElectionID: fmt.Sprintf("crossplane-leader-election-%s", c.Name),
+		LeaderElectionID: "crossplane-leader-election-core",
 		SyncPeriod:       &c.Sync,
 	})
 	if err != nil {
 		return errors.Wrap(err, "Cannot create manager")
 	}
 
-	// Note that the controller managers scheme must be a superset of the
-	// package manager's object scheme; it must contain all object types that
-	// may appear in a Crossplane package. This is because the package manager
-	// uses the controller manager's client (and thus scheme) to create packaged
-	// objects.
-
-	if err := extv1.AddToScheme(mgr.GetScheme()); err != nil {
-		return errors.Wrap(err, "Cannot add CustomResourceDefinition v1 API to scheme")
+	f := &feature.Flags{}
+	if c.EnableCompositionRevisions {
+		f.Enable(feature.FlagEnableAlphaCompositionRevisions)
+		log.Info("Alpha feature enabled", "flag", feature.FlagEnableAlphaCompositionRevisions.String())
 	}
 
-	if err := extv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
-		return errors.Wrap(err, "Cannot add CustomResourceDefinition v1beta1 API to scheme")
-	}
-
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		return errors.Wrap(err, "Cannot add core Crossplane APIs to scheme")
-	}
-
-	if err := apiextensions.Setup(mgr, log); err != nil {
+	if err := apiextensions.Setup(mgr, log, f); err != nil {
 		return errors.Wrap(err, "Cannot setup API extension controllers")
 	}
 
 	pkgCache := xpkg.NewImageCache(c.CacheDir, afero.NewOsFs())
 
-	if err := pkg.Setup(mgr, log, pkgCache, c.Namespace); err != nil {
+	if err := pkg.Setup(mgr, log, pkgCache, c.Namespace, c.Registry); err != nil {
 		return errors.Wrap(err, "Cannot add packages controllers to manager")
 	}
 
