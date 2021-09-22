@@ -13,11 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+//
+// Copyright 2021 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package claim
 
 import (
 	"context"
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
+	"github.com/crossplane/crossplane-runtime/pkg/resource/unstructured/claim"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -54,7 +71,8 @@ func NewAPIBinder(c client.Client) *APIBinder {
 
 // Bind the supplied claim to the supplied composite.
 func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp resource.Composite) error {
-	existing := cm.GetResourceReference()
+	// IBM Patch: Move resourceRef to status
+	existing := GetResourceReference(cm)
 	proposed := meta.ReferenceTo(cp, cp.GetObjectKind().GroupVersionKind())
 	equal := cmp.Equal(existing, proposed, cmpopts.IgnoreFields(corev1.ObjectReference{}, "UID"))
 
@@ -70,9 +88,72 @@ func (a *APIBinder) Bind(ctx context.Context, cm resource.CompositeClaim, cp res
 		return nil
 	}
 
-	cm.SetResourceReference(proposed)
+	// IBM Patch: Move resourceRef to status
+	if err := SetResourceRef(ctx, a.client, cm, proposed); err != nil {
+		return err
+	}
 	return errors.Wrap(a.client.Update(ctx, cm), errUpdateClaim)
 }
+
+// IBM Patch: Move resourceRef to status
+
+// GetResourceReference Patch method which read data from status instead of spec
+func GetResourceReference(cm resource.CompositeClaim) *corev1.ObjectReference {
+	out := &corev1.ObjectReference{}
+	data, ok := cm.(*claim.Unstructured)
+	if data == nil || !ok {
+		// back to standard inside one test where we can not change mock because of different repo
+		return cm.GetResourceReference()
+	}
+	if err := fieldpath.Pave(data.Object).GetValueInto("status.resourceRef", out); err != nil {
+		// back to standard inside one test where we can not change mock because of different repo
+		if err := fieldpath.Pave(data.Object).GetValueInto("spec.resourceRef", out); err != nil {
+			return nil
+		}
+		return out
+	}
+	if out.Name == "" {
+		return nil
+	}
+	return out
+}
+
+// SetResourceRef - you can set resourceRef or you can remove it , if you set nil
+func SetResourceRef(ctx context.Context, c client.Client, cm resource.CompositeClaim, resourceRef interface{}) error {
+	data, ok := cm.(*claim.Unstructured)
+	if !ok {
+		return nil
+	}
+
+	// initailize status if we need to set it and it is not exists
+	if data.Object["status"] == nil && resourceRef != nil {
+		data.Object["status"] = map[string]interface{}{
+			"resourceRef": resourceRef,
+		}
+	}
+
+	iStatus, err := fieldpath.Pave(data.Object).GetValue("status")
+	if err != nil {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	status, ok := iStatus.(map[string]interface{})
+	if !ok {
+		return errors.New(errUnsupportedClaimSpec)
+	}
+
+	if resourceRef != nil {
+		status["resourceRef"] = resourceRef
+	} else {
+		delete(status, "resourceRef")
+	}
+	if err := c.Status().Update(ctx, cm); err != nil {
+		return errors.Wrap(err, errUpdateClaim)
+	}
+	return nil
+}
+
+// IBM Patch End: Move resourceRef to status
 
 // An APIConnectionPropagator propagates connection details by reading
 // them from and writing them to a Kubernetes API server.
