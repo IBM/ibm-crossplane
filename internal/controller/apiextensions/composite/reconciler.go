@@ -502,7 +502,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			continue
 		}
 		// IBM Patch: Do not require that cd is controlled by cr
-		if err := r.client.Apply(ctx, cd.resource, append(mergeOptions(cd.appliedPatches))); err != nil {
+		if err := r.client.Apply(ctx, cd.resource, mergeOptions(cd.appliedPatches)...); err != nil {
 			log.Debug(errApply, "error", err)
 			r.record.Event(cr, event.Warning(reasonCompose, err))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
