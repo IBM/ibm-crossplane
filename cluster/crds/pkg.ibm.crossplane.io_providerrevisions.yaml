@@ -1,20 +1,22 @@
+
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: configurationrevisions.pkg.crossplane.io
+  name: providerrevisions.pkg.ibm.crossplane.io
 spec:
-  group: pkg.crossplane.io
+  group: pkg.ibm.crossplane.io
   names:
     categories:
     - crossplane
     - pkgrev
-    kind: ConfigurationRevision
-    listKind: ConfigurationRevisionList
-    plural: configurationrevisions
-    singular: configurationrevision
+    kind: ProviderRevision
+    listKind: ProviderRevisionList
+    plural: providerrevisions
+    singular: providerrevision
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -42,7 +44,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: A ConfigurationRevision that has been added to Crossplane.
+        description: A ProviderRevision that has been added to Crossplane.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -284,7 +286,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: 'A ConfigurationRevision that has been added to Crossplane. [DEPRECATED]:
+        description: 'A ProviderRevision that has been added to Crossplane. [DEPRECATED]:
           Please use the identical v1 API instead. The v1beta1 API is scheduled to
           be removed in Crossplane v1.6.'
         properties:
