@@ -419,10 +419,28 @@ func NewAPIConnectionDetailsFetcher(c client.Client) *APIConnectionDetailsFetche
 	return &APIConnectionDetailsFetcher{client: c}
 }
 
+// GetFromLabelWriteConnectionSecretToReference of this Composite resource.
+// IBM Patch: Read WriteConnectionSecretToReference from Label, because we can not store it e.g. in KafkaUser CR
+func GetFromLabelWriteConnectionSecretToReference(cd resource.Composed) *xpv1.SecretReference {
+	out := &xpv1.SecretReference{}
+
+	data, ok := cd.(*composed.Unstructured)
+	if data == nil || !ok {
+		return nil
+	}
+
+	if out.Name = cd.GetLabels()["writeConnectionSecretToRef"]; out.Name == "" {
+		if err := fieldpath.Pave(data.Object).GetValueInto("spec.writeConnectionSecretToRef", out); err != nil {
+			return nil
+		}
+	}
+	return out
+}
+
 // FetchConnectionDetails of the supplied composed resource, if any.
 func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Context, cd resource.Composed, t v1.ComposedTemplate) (managed.ConnectionDetails, error) { // nolint:gocyclo
 	data := map[string][]byte{}
-	if sref := cd.GetWriteConnectionSecretToReference(); sref != nil {
+	if sref := GetFromLabelWriteConnectionSecretToReference(cd); sref != nil {
 		// It's possible that the composed resource does want to write a
 		// connection secret but has not yet. We presume this isn't an issue and
 		// that we'll propagate any connection details during a future
