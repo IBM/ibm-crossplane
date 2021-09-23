@@ -1,8 +1,8 @@
 # This kustomization can be used to remotely install all Crossplane CRDs
 # by running kubectl apply -k https://github.com/crossplane/crossplane//cluster?ref=master
 resources:
-- crds/apiextensions.ibm.crossplane.io_compositionrevisions.yaml
 - crds/apiextensions.ibm.crossplane.io_compositeresourcedefinitions.yaml
+- crds/apiextensions.ibm.crossplane.io_compositionrevisions.yaml
 - crds/apiextensions.ibm.crossplane.io_compositions.yaml
 - crds/pkg.ibm.crossplane.io_configurationrevisions.yaml
 - crds/pkg.ibm.crossplane.io_configurations.yaml
