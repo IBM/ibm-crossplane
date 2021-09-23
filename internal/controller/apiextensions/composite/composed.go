@@ -424,15 +424,8 @@ func NewAPIConnectionDetailsFetcher(c client.Client) *APIConnectionDetailsFetche
 func GetFromLabelWriteConnectionSecretToReference(cd resource.Composed) *xpv1.SecretReference {
 	out := &xpv1.SecretReference{}
 
-	data, ok := cd.(*composed.Unstructured)
-	if data == nil || !ok {
-		return nil
-	}
-
 	if out.Name = cd.GetLabels()["writeConnectionSecretToRef"]; out.Name == "" {
-		if err := fieldpath.Pave(data.Object).GetValueInto("spec.writeConnectionSecretToRef", out); err != nil {
-			return nil
-		}
+		out = cd.GetWriteConnectionSecretToReference()
 	}
 	return out
 }
