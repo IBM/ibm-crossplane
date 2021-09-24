@@ -143,9 +143,9 @@ func Setup(mgr ctrl.Manager, log logging.Logger, f *feature.Flags) error {
 		Owns(&extv1.CustomResourceDefinition{}).
 		WithOptions(kcontroller.Options{MaxConcurrentReconciles: maxConcurrency}).
 		Complete(NewReconciler(mgr,
-		// IBM Patch: Remove cluster permission for Secrets
-		// - client without cluster permissions as an additional argument
- 			cfs,
+			// IBM Patch: Remove cluster permission for Secrets
+			// - client without cluster permissions as an additional argument
+			cfs,
 			WithLogger(log.WithValues("controller", name)),
 			WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
 			WithFeatureFlags(f)))
@@ -427,10 +427,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	recorder := r.record.WithAnnotations("controller", composite.ControllerName(d.GetName()))
 
-	// IBM Patch: Remove cluster permission for Secrets
-	o := kcontroller.Options{
-		Reconciler: composite.NewReconciler(r.mgr, r.clientForSecrets, resource.CompositeKind(d.GetCompositeGroupVersionKind()),
-		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.clientForSecrets, d.GetConnectionSecretKeys())),
+	o := []composite.ReconcilerOption{
+		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.client, d.GetConnectionSecretKeys())),
 		composite.WithCompositionSelector(composite.NewCompositionSelectorChain(
 			composite.NewEnforcedCompositionSelector(*d, recorder),
 			composite.NewAPIDefaultCompositionSelector(r.client, *meta.ReferenceTo(d, v1.CompositeResourceDefinitionGroupVersionKind), recorder),
@@ -438,7 +436,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		)),
 		composite.WithLogger(log.WithValues("controller", composite.ControllerName(d.GetName()))),
 		composite.WithRecorder(recorder),
-		)}
+	}
 
 	// We only want to enable CompositionRevision support if the relevant
 	// feature flag is enabled. Otherwise we start the XR Reconciler with
@@ -449,7 +447,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	ko := kcontroller.Options{
-		Reconciler:              composite.NewReconciler(r.mgr, resource.CompositeKind(d.GetCompositeGroupVersionKind()), o...),
+		// IBM Patch: Remove cluster permission for Secrets
+		// client for secrets as an additional argument
+		Reconciler:              composite.NewReconciler(r.mgr, r.clientForSecrets, resource.CompositeKind(d.GetCompositeGroupVersionKind()), o...),
 		MaxConcurrentReconciles: maxConcurrency}
 
 	u := &kunstructured.Unstructured{}
