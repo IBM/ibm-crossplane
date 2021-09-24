@@ -33,6 +33,9 @@ package definition
 
 import (
 	"context"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"strings"
 	"time"
 
@@ -124,12 +127,25 @@ func (fn CRDRenderFn) Render(d *v1.CompositeResourceDefinition) (*extv1.CustomRe
 func Setup(mgr ctrl.Manager, log logging.Logger, f *feature.Flags) error {
 	name := "defined/" + strings.ToLower(v1.CompositeResourceDefinitionGroupKind)
 
+	// IBM Patch: Remove cluster permission for Secrets
+	// - create new client, that avoids using cluster-scope informers.
+	//   Will be needed in secrets creation in claim/composite resources.
+	config := mgr.GetConfig()
+	cfs, err := client.New(config, client.Options{})
+	if err != nil {
+		log.Debug("Cannot create client for secrets", "error", err)
+	}
+	// IBM Patch end
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		For(&v1.CompositeResourceDefinition{}).
 		Owns(&extv1.CustomResourceDefinition{}).
 		WithOptions(kcontroller.Options{MaxConcurrentReconciles: maxConcurrency}).
 		Complete(NewReconciler(mgr,
+		// IBM Patch: Remove cluster permission for Secrets
+		// - client without cluster permissions as an additional argument
+ 			cfs,
 			WithLogger(log.WithValues("controller", name)),
 			WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
 			WithFeatureFlags(f)))
@@ -199,7 +215,7 @@ type definition struct {
 }
 
 // NewReconciler returns a Reconciler of CompositeResourceDefinitions.
-func NewReconciler(mgr manager.Manager, opts ...ReconcilerOption) *Reconciler {
+func NewReconciler(mgr manager.Manager, cfs client.Client, opts ...ReconcilerOption) *Reconciler {
 	kube := unstructured.NewClient(mgr.GetClient())
 
 	r := &Reconciler{
@@ -208,6 +224,11 @@ func NewReconciler(mgr manager.Manager, opts ...ReconcilerOption) *Reconciler {
 		client: resource.ClientApplicator{
 			Client:     kube,
 			Applicator: resource.NewAPIUpdatingApplicator(kube),
+		},
+
+		clientForSecrets: resource.ClientApplicator{
+			Client:     cfs,
+			Applicator: resource.NewAPIUpdatingApplicator(cfs),
 		},
 
 		composite: definition{
@@ -229,8 +250,9 @@ func NewReconciler(mgr manager.Manager, opts ...ReconcilerOption) *Reconciler {
 
 // A Reconciler reconciles CompositeResourceDefinitions.
 type Reconciler struct {
-	client resource.ClientApplicator
-	mgr    manager.Manager
+	client           resource.ClientApplicator
+	clientForSecrets resource.ClientApplicator
+	mgr              manager.Manager
 
 	composite definition
 
@@ -405,8 +427,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	recorder := r.record.WithAnnotations("controller", composite.ControllerName(d.GetName()))
 
-	o := []composite.ReconcilerOption{
-		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.client, d.GetConnectionSecretKeys())),
+	// IBM Patch: Remove cluster permission for Secrets
+	o := kcontroller.Options{
+		Reconciler: composite.NewReconciler(r.mgr, r.clientForSecrets, resource.CompositeKind(d.GetCompositeGroupVersionKind()),
+		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.clientForSecrets, d.GetConnectionSecretKeys())),
 		composite.WithCompositionSelector(composite.NewCompositionSelectorChain(
 			composite.NewEnforcedCompositionSelector(*d, recorder),
 			composite.NewAPIDefaultCompositionSelector(r.client, *meta.ReferenceTo(d, v1.CompositeResourceDefinitionGroupVersionKind), recorder),
@@ -414,7 +438,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		)),
 		composite.WithLogger(log.WithValues("controller", composite.ControllerName(d.GetName()))),
 		composite.WithRecorder(recorder),
-	}
+		)}
 
 	// We only want to enable CompositionRevision support if the relevant
 	// feature flag is enabled. Otherwise we start the XR Reconciler with
