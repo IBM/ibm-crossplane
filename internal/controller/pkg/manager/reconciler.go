@@ -61,6 +61,7 @@ const (
 	errGetPackage           = "cannot get package"
 	errListRevisions        = "cannot list revisions for package"
 	errUnpack               = "cannot unpack package"
+	errApplyPackage         = "cannot apply package"
 	errApplyPackageRevision = "cannot apply package revision"
 	errGCPackageRevision    = "cannot garbage collect old package revision"
 
@@ -75,6 +76,7 @@ const (
 const (
 	reasonList               event.Reason = "ListRevision"
 	reasonUnpack             event.Reason = "UnpackPackage"
+	reasonApply              event.Reason = "ApplyPackage"
 	reasonTransitionRevision event.Reason = "TransitionRevision"
 	reasonGarbageCollect     event.Reason = "GarbageCollect"
 	reasonInstall            event.Reason = "InstallPackageRevision"
@@ -82,7 +84,7 @@ const (
 
 // IBM Patch: replace config image from env var
 const (
-	fromEnvVar string = "fromEnvVar"
+	fromEnvVar = "fromEnvVar"
 )
 
 // ReconcilerOption is used to configure the Reconciler.
@@ -244,6 +246,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if p.GetSource() == fromEnvVar {
 		src := os.Getenv("IBM_CROSSPLANE_CONFIG_IMAGE")
 		p.SetSource(src)
+		if err := r.client.Apply(ctx, p); err != nil {
+			log.Debug(errApplyPackage, "error", err)
+			r.record.Event(p, event.Warning(reasonApply, errors.Wrap(err, errApplyPackage)))
+			return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, p), errApplyPackage)
+		}
+		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 	// End IBM Patch
 
