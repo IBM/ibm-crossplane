@@ -99,6 +99,11 @@ const (
 	reasonApply event.Reason = "ApplyPackage"
 )
 
+// IBM Patch: replace config image from env var
+const (
+	fromEnvVar string = "fromEnvVar"
+)
+
 // ReconcilerOption is used to configure the Reconciler.
 type ReconcilerOption func(*Reconciler)
 
@@ -266,6 +271,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		"version", p.GetResourceVersion(),
 		"name", p.GetName(),
 	)
+
+	// IBM Patch: replace 'fromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
+	if p.GetSource() == fromEnvVar {
+		src := os.Getenv("IBM_CROSSPLANE_CONFIG_IMAGE")
+		p.SetSource(src)
+	}
+	// End IBM Patch
 
 	// Get existing package revisions.
 	prs := r.newPackageRevisionList()
