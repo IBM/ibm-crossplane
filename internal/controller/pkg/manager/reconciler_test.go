@@ -13,11 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+//
+// Copyright 2021 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package manager
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -57,6 +73,9 @@ func TestReconcile(t *testing.T) {
 	pullAlways := corev1.PullAlways
 	trueVal := true
 	revHistory := int64(1)
+
+	os.Setenv("IBM_CROSSPLANE_CONFIG_IMAGE", "ibm_crossplane_config_image")
+	defer os.Unsetenv("IBM_CROSSPLANE_CONFIG_IMAGE")
 
 	type args struct {
 		req reconcile.Request
@@ -700,6 +719,85 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
+		// IBM Patch: replace 'fromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
+		"ErrApplyPackage": {
+			reason: "Failing to apply a package should cause requeue after short wait.",
+			args: args{
+				req: reconcile.Request{NamespacedName: types.NamespacedName{Name: "test"}},
+				rec: &Reconciler{
+					newPackage:             func() v1.Package { return &v1.Configuration{} },
+					newPackageRevision:     func() v1.PackageRevision { return &v1.ConfigurationRevision{} },
+					newPackageRevisionList: func() v1.PackageRevisionList { return &v1.ConfigurationRevisionList{} },
+					client: resource.ClientApplicator{
+						Client: &test.MockClient{
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
+								p := o.(*v1.Configuration)
+								p.SetName("test")
+								p.SetSource("fromEnvVar")
+								p.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
+								p.SetRevisionHistoryLimit(&revHistory)
+								return nil
+							}),
+							MockStatusUpdate: test.NewMockStatusUpdateFn(nil),
+						},
+						Applicator: resource.ApplyFn(func(_ context.Context, _ client.Object, _ ...resource.ApplyOption) error {
+							return errBoom
+						}),
+					},
+					pkg: &MockRevisioner{
+						MockRevision: NewMockRevisionFn("test-1234567", nil),
+					},
+					log:    logging.NewNopLogger(),
+					record: event.NewNopRecorder(),
+				},
+			},
+			want: want{
+				r: reconcile.Result{RequeueAfter: shortWait},
+			},
+		},
+		"SuccessfulReplacePackageImage": {
+			reason: "We should successfully replace 'fromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE.",
+			args: args{
+				req: reconcile.Request{NamespacedName: types.NamespacedName{Name: "test"}},
+				rec: &Reconciler{
+					newPackage:             func() v1.Package { return &v1.Configuration{} },
+					newPackageRevision:     func() v1.PackageRevision { return &v1.ConfigurationRevision{} },
+					newPackageRevisionList: func() v1.PackageRevisionList { return &v1.ConfigurationRevisionList{} },
+					client: resource.ClientApplicator{
+						Client: &test.MockClient{
+							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
+								p := o.(*v1.Configuration)
+								p.SetName("test")
+								p.SetSource("fromEnvVar")
+								p.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
+								p.SetRevisionHistoryLimit(&revHistory)
+								return nil
+							}),
+						},
+						Applicator: resource.ApplyFn(func(_ context.Context, o client.Object, _ ...resource.ApplyOption) error {
+							want := &v1.Configuration{}
+							want.SetName("test")
+							want.SetSource("ibm_crossplane_config_image")
+							want.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
+							want.SetRevisionHistoryLimit(&revHistory)
+							if diff := cmp.Diff(want, o, test.EquateConditions()); diff != "" {
+								t.Errorf("-want, +got:\n%s", diff)
+							}
+							return nil
+						}),
+					},
+					pkg: &MockRevisioner{
+						MockRevision: NewMockRevisionFn("test-1234567", nil),
+					},
+					log:    logging.NewNopLogger(),
+					record: event.NewNopRecorder(),
+				},
+			},
+			want: want{
+				r: reconcile.Result{RequeueAfter: shortWait},
+			},
+		},
+		// End IBM Patch
 	}
 
 	for name, tc := range cases {
