@@ -81,7 +81,7 @@ const (
 	reasonTransitionRevision event.Reason = "TransitionRevision"
 	reasonGarbageCollect     event.Reason = "GarbageCollect"
 	reasonInstall            event.Reason = "InstallPackageRevision"
-	//IBM Patch
+	// IBM Patch
 	reasonApply event.Reason = "ApplyPackage"
 	reasonGet   event.Reason = "GetServiceAccount"
 )
