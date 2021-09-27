@@ -13,6 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+//
+// Copyright 2021 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package manager
 
@@ -64,8 +79,7 @@ const (
 	errApplyPackageRevision = "cannot apply package revision"
 	errGCPackageRevision    = "cannot garbage collect old package revision"
 	// IBM Patch
-	errApplyPackage      = "cannot apply package"
-	errGetServiceAccount = "cannot get service account"
+	errApplyPackage = "cannot apply package"
 
 	errUpdateStatus                  = "cannot update package status"
 	errUpdateInactivePackageRevision = "cannot update inactive package revision"
@@ -83,7 +97,6 @@ const (
 	reasonInstall            event.Reason = "InstallPackageRevision"
 	// IBM Patch
 	reasonApply event.Reason = "ApplyPackage"
-	reasonGet   event.Reason = "GetServiceAccount"
 )
 
 // ReconcilerOption is used to configure the Reconciler.
@@ -239,27 +252,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if p.GetSource() == "fromEnvVar" {
 		src := os.Getenv("IBM_CROSSPLANE_CONFIG_IMAGE")
 		p.SetSource(src)
-
-		// Get Crossplane's service account to use its image pull secrets
-		// in case registry requires authentication
-		serviceAccountKey := client.ObjectKey{
-			Namespace: os.Getenv("WATCH_NAMESPACE"),
-			Name:      "ibm-crossplane",
-		}
-		serviceAccount := corev1.ServiceAccount{}
-		if err := r.client.Get(ctx, serviceAccountKey, &serviceAccount); err != nil {
-			log.Debug(errGetServiceAccount, "error", err)
-			r.record.Event(p, event.Warning(reasonGet, errors.Wrap(err, errGetServiceAccount)))
-			return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, p), errGetServiceAccount)
-		}
-		p.SetPackagePullSecrets(serviceAccount.ImagePullSecrets)
-
 		if err := r.client.Apply(ctx, p); err != nil {
 			log.Debug(errApplyPackage, "error", err)
 			r.record.Event(p, event.Warning(reasonApply, errors.Wrap(err, errApplyPackage)))
 			return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, p), errApplyPackage)
 		}
-
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 	// End IBM Patch
