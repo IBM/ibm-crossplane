@@ -13,12 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+//
+// Copyright 2021 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package manager
 
 import (
 	"context"
 	"math"
+	"os"
 	"strings"
 	"time"
 
@@ -62,6 +78,8 @@ const (
 	errUnpack               = "cannot unpack package"
 	errApplyPackageRevision = "cannot apply package revision"
 	errGCPackageRevision    = "cannot garbage collect old package revision"
+	// IBM Patch
+	errApplyPackage = "cannot apply package"
 
 	errUpdateStatus                  = "cannot update package status"
 	errUpdateInactivePackageRevision = "cannot update inactive package revision"
@@ -77,6 +95,8 @@ const (
 	reasonTransitionRevision event.Reason = "TransitionRevision"
 	reasonGarbageCollect     event.Reason = "GarbageCollect"
 	reasonInstall            event.Reason = "InstallPackageRevision"
+	// IBM Patch
+	reasonApply event.Reason = "ApplyPackage"
 )
 
 // ReconcilerOption is used to configure the Reconciler.
@@ -227,6 +247,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.Debug(errGetPackage, "error", err)
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetPackage)
 	}
+
+	// IBM Patch: replace 'fromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
+	if p.GetSource() == "fromEnvVar" {
+		src := os.Getenv("IBM_CROSSPLANE_CONFIG_IMAGE")
+		p.SetSource(src)
+		if err := r.client.Apply(ctx, p); err != nil {
+			log.Debug(errApplyPackage, "error", err)
+			r.record.Event(p, event.Warning(reasonApply, errors.Wrap(err, errApplyPackage)))
+			return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, p), errApplyPackage)
+		}
+		return reconcile.Result{RequeueAfter: shortWait}, nil
+	}
+	// End IBM Patch
 
 	log = log.WithValues(
 		"uid", p.GetUID(),
