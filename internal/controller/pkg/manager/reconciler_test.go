@@ -719,7 +719,7 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
-		// IBM Patch: replace 'fromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
+		// IBM Patch: replace 'FromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
 		"ErrApplyPackage": {
 			reason: "Failing to apply a package should cause requeue after short wait.",
 			args: args{
@@ -733,7 +733,7 @@ func TestReconcile(t *testing.T) {
 							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								p := o.(*v1.Configuration)
 								p.SetName("test")
-								p.SetSource("fromEnvVar")
+								p.SetSource("FromEnvVar")
 								p.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
 								p.SetRevisionHistoryLimit(&revHistory)
 								return nil
@@ -768,7 +768,7 @@ func TestReconcile(t *testing.T) {
 							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								p := o.(*v1.Configuration)
 								p.SetName("test")
-								p.SetSource("fromEnvVar")
+								p.SetSource("FromEnvVar")
 								p.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
 								p.SetRevisionHistoryLimit(&revHistory)
 								return nil
