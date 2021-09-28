@@ -354,9 +354,13 @@ func NewReconciler(mgr manager.Manager, cfs client.Client, of resource.Composite
 		},
 
 		composed: composedResource{
-			Renderer:                 NewAPIDryRunRenderer(kube),
-			ReadinessChecker:         ReadinessCheckerFn(IsReady),
-			ConnectionDetailsFetcher: NewAPIConnectionDetailsFetcher(kube),
+			Renderer:         NewAPIDryRunRenderer(kube),
+			ReadinessChecker: ReadinessCheckerFn(IsReady),
+			// IBM Patch: Remove cluster permission for Secrets
+			// applied client has been changed to `cfs` as it is a client without cluster scope informers
+			// used for secrets manipulations
+			ConnectionDetailsFetcher: NewAPIConnectionDetailsFetcher(cfs),
+			// IBM Patch: end
 		},
 
 		log:    logging.NewNopLogger(),
