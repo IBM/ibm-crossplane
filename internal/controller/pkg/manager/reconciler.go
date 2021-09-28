@@ -242,7 +242,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	p := r.newPackage()
 	if err := r.client.Get(ctx, req.NamespacedName, p); err != nil {
-		// There's no need to requeue if we no longer exist. Otherwise we'll be
+		// There's no need to requeue if we no longer exist. Otherwise, we'll be
 		// requeued implicitly because we return an error.
 		log.Debug(errGetPackage, "error", err)
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetPackage)
@@ -259,7 +259,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
-	// End IBM Patch
+	// IBM Patch end
 
 	log = log.WithValues(
 		"uid", p.GetUID(),
