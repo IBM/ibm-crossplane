@@ -248,8 +248,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetPackage)
 	}
 
-	// IBM Patch: replace 'fromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
-	if p.GetSource() == "fromEnvVar" {
+	// IBM Patch: replace 'FromEnvVar' with image name from IBM_CROSSPLANE_CONFIG_IMAGE
+	if p.GetSource() == "FromEnvVar" {
 		src := os.Getenv("IBM_CROSSPLANE_CONFIG_IMAGE")
 		p.SetSource(src)
 		if err := r.client.Apply(ctx, p); err != nil {
