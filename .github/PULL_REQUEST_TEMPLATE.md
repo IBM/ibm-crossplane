@@ -24,6 +24,10 @@ I have:
 - [ ] Read and followed Crossplane's [contribution process].
 - [ ] Run `make reviewable test` to ensure this PR is ready for review.
 
+if the new changes require, also:
+- [ ] Extended the tests in BedrockShim repo or created an issue for it.
+These tests should cover for example checking new expected resources or their content.
+
 ### How has this code been tested
 
 <!--
