@@ -25,6 +25,10 @@ I have:
 - [ ] Run `make reviewable` to ensure this PR is ready for review.
 - [ ] Added `backport release-x.y` labels to auto-backport this PR if necessary.
 
+if the new changes require, also:
+- [ ] Extended the tests in BedrockShim repo or created an issue for it.
+These tests should cover for example checking new expected resources or their content.
+
 ### How has this code been tested
 
 <!--
