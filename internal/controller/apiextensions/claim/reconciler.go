@@ -158,10 +158,13 @@ type crComposite struct {
 	ConnectionPropagator
 }
 
-func defaultCRComposite(c client.Client) crComposite {
+// IBM Patch: Remove cluster permission for Secrets
+// applied client has been changed to `cfs` as it is a client without cluster scope informers
+// used for secrets manipulations
+func defaultCRComposite(c client.Client, cfs client.Client) crComposite {
 	return crComposite{
 		Configurator:         NewAPIDryRunCompositeConfigurator(c),
-		ConnectionPropagator: NewAPIConnectionPropagator(c),
+		ConnectionPropagator: NewAPIConnectionPropagator(cfs),
 	}
 }
 
@@ -265,7 +268,7 @@ func NewReconciler(m manager.Manager, cfs client.Client, of resource.CompositeCl
 		// IBM Patch: Remove cluster permission for Secrets
 		// applied client has been changed to `cfs` as it is a client without cluster scope informers
 		// used for secrets manipulations
-		composite: defaultCRComposite(cfs),
+		composite: defaultCRComposite(c, cfs),
 		// IBM Patch: end
 		claim:  defaultCRClaim(c),
 		log:    logging.NewNopLogger(),
