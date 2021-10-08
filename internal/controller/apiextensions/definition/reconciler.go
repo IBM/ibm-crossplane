@@ -428,7 +428,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	recorder := r.record.WithAnnotations("controller", composite.ControllerName(d.GetName()))
 
 	o := []composite.ReconcilerOption{
-		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.client, d.GetConnectionSecretKeys())),
+		// IBM Patch: Remove cluster permission for Secrets
+		composite.WithConnectionPublisher(composite.NewAPIFilteredSecretPublisher(r.clientForSecrets, d.GetConnectionSecretKeys())),
 		composite.WithCompositionSelector(composite.NewCompositionSelectorChain(
 			composite.NewEnforcedCompositionSelector(*d, recorder),
 			composite.NewAPIDefaultCompositionSelector(r.client, *meta.ReferenceTo(d, v1.CompositeResourceDefinitionGroupVersionKind), recorder),
