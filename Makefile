@@ -162,10 +162,6 @@ cobertura:
 		grep -v zz_generated.deepcopy | \
 		$(GOCOVER_COBERTURA) > $(GO_TEST_OUTPUT)/cobertura-coverage.xml
 
-# Ensure a PR is ready for review.
-reviewable: generate lint
-	@go mod tidy
-
 # integration tests
 e2e.run: test-integration
 
