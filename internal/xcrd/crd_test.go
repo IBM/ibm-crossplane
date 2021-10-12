@@ -237,6 +237,23 @@ func TestForCompositeResource(t *testing.T) {
 											},
 										},
 									},
+									"compositionRevisionRef": {
+										Type:     "object",
+										Required: []string{"name"},
+										Properties: map[string]extv1.JSONSchemaProps{
+											"name": {Type: "string"},
+										},
+										Description: "Alpha: This field may be deprecated or changed without notice.",
+									},
+									"compositionUpdatePolicy": {
+										Type: "string",
+										Enum: []extv1.JSON{
+											{Raw: []byte(`"Automatic"`)},
+											{Raw: []byte(`"Manual"`)},
+										},
+										Default:     &extv1.JSON{Raw: []byte(`"Automatic"`)},
+										Description: "Alpha: This field may be deprecated or changed without notice.",
+									},
 									"claimRef": {
 										Type:     "object",
 										Required: []string{"apiVersion", "kind", "namespace", "name"},
@@ -257,7 +274,7 @@ func TestForCompositeResource(t *testing.T) {
 													"name":       {Type: "string"},
 													"kind":       {Type: "string"},
 												},
-												Required: []string{"apiVersion", "kind", "name"},
+												Required: []string{"apiVersion", "kind"},
 											},
 										},
 									},
@@ -605,6 +622,21 @@ func TestForCompositeResourceClaim(t *testing.T) {
 													},
 												},
 											},
+										},
+										"compositionRevisionRef": {
+											Type:     "object",
+											Required: []string{"name"},
+											Properties: map[string]extv1.JSONSchemaProps{
+												"name": {Type: "string"},
+											},
+										},
+										"compositionUpdatePolicy": {
+											Type: "string",
+											Enum: []extv1.JSON{
+												{Raw: []byte(`"Automatic"`)},
+												{Raw: []byte(`"Manual"`)},
+											},
+											Default: &extv1.JSON{Raw: []byte(`"Automatic"`)},
 										},
 										"resourceRef": {
 											Type:     "object",

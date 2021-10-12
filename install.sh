@@ -31,14 +31,21 @@ case $OS in
     fi
     ;;
   Darwin)
-    OS_ARCH=darwin_amd64
+    case $ARCH in
+      x86_64|amd64|arm64)
+        OS_ARCH=darwin_amd64
+        ;;
+      *)
+        unsupported_arch $OS $ARCH
+        ;;
+    esac
     ;;
   Linux)
     case $ARCH in
       x86_64|amd64)
         OS_ARCH=linux_amd64
         ;;
-      arm64)
+      arm64|aarch64)
         OS_ARCH=linux_arm64
         ;;
       *)

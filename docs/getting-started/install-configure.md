@@ -40,11 +40,6 @@ to your hosted Crossplane cluster.
 Once you've completed these two steps, skip down to [Install Crossplane
 CLI](#install-crossplane-cli) for further setup instructions.
 
-> Note that Upbound Cloud does not yet include support for Crossplane's alpha
-> Open Application Model (OAM) functionality. You'll need to install a self
-> hosted Crossplane if you'd like to try the 'Run Applications' part of this
-> guide.
-
 <i>Want see another hosted Crossplane service listed? Please [reach out on
 Slack][Slack] and our community will highlight it here!</i>
 
@@ -122,10 +117,6 @@ helm repo update
 helm install crossplane --namespace crossplane-system crossplane-stable/crossplane
 ```
 
-> Note that OAM is an alpha feature that is disabled by default. Make sure to
-> install the Crossplane Helm chart with the `--set alpha.oam.enabled=true` flag
-> if you would like to follow the 'Run Applications'  part of the guide.
-
 </div>
 <div class="tab-pane fade" id="install-tab-helm3-latest" markdown="1">
 Use Helm 3 to install the latest pre-release version of Crossplane:
@@ -147,10 +138,6 @@ For example:
 helm install crossplane --namespace crossplane-system crossplane-master/crossplane \
   --version 0.11.0-rc.100.gbc5d311 --devel
 ```
-
-> Note that OAM is an alpha feature that is disabled by default. Make sure to
-> install the Crossplane Helm chart with the `--set alpha.oam.enabled=true` flag
-> if you would like to follow the 'Run Applications'  part of the guide.
 
 </div>
 </div>
@@ -180,14 +167,14 @@ install [Crossplane packages]:
 <div class="tab-pane fade in active" id="install-tab-cli" markdown="1">
 
 ```console
-curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/install.sh | sh
+curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh
 ```
 
 </div>
 <div class="tab-pane fade" id="install-tab-cli-latest" markdown="1">
 
 ```console
-curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/install.sh | CHANNEL=master sh
+curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | CHANNEL=master sh
 ```
 
 You may also specify `VERSION` for download if you would like to select a
@@ -195,7 +182,7 @@ specific version from the given release channel. If a version is not specified
 the latest version from the release channel will be used.
 
 ```console
-curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.0/install.sh | CHANNEL=master VERSION=v1.0.0-rc.0.130.g94f34fd3 sh
+curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | CHANNEL=master VERSION=v1.0.0-rc.0.130.g94f34fd3 sh
 ```
 
 </div>
@@ -247,12 +234,12 @@ provider that can satisfy a `PostgreSQLInstance`. Let's get started!
 > section.
 
 ```console
-kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-aws:v1.1.0
+kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-aws:latest
 ```
 
 Wait until all packages become healthy:
 ```
-kubectl get pkg --watch
+watch kubectl get pkg
 ```
 
 ### Get AWS Account Keyfile
@@ -288,7 +275,7 @@ spec:
       key: creds
 ```
 ```console
-kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/configure/aws/providerconfig.yaml
+kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/configure/aws/providerconfig.yaml
 ```
 
 </div>
@@ -301,12 +288,12 @@ kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/release
 > section.
 
 ```console
-kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-aws-with-vpc:v1.1.0
+kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-aws-with-vpc:latest
 ```
 
 Wait until all packages become healthy:
 ```
-kubectl get pkg --watch
+watch kubectl get pkg
 ```
 
 ### Get AWS Account Keyfile
@@ -342,7 +329,7 @@ spec:
       key: creds
 ```
 ```console
-kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/configure/aws/providerconfig.yaml
+kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/configure/aws/providerconfig.yaml
 ```
 
 </div>
@@ -355,12 +342,12 @@ kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/release
 > section.
 
 ```console
-kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-gcp:v1.1.0
+kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-gcp:latest
 ```
 
 Wait until all packages become healthy:
 ```
-kubectl get pkg --watch
+watch kubectl get pkg
 ```
 
 ### Get GCP Account Keyfile
@@ -425,12 +412,12 @@ spec:
 > section.
 
 ```console
-kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-azure:v1.1.0
+kubectl crossplane install configuration registry.upbound.io/xp/getting-started-with-azure:latest
 ```
 
 Wait until all packages become healthy:
 ```
-kubectl get pkg --watch
+watch kubectl get pkg
 ```
 
 ### Get Azure Principal Keyfile
@@ -481,7 +468,7 @@ spec:
       key: creds
 ```
 ```console
-kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/release-1.1/docs/snippets/configure/azure/providerconfig.yaml
+kubectl apply -f https://raw.githubusercontent.com/crossplane/crossplane/master/docs/snippets/configure/azure/providerconfig.yaml
 ```
 
 </div>

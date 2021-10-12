@@ -797,7 +797,7 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
-		// End IBM Patch
+		// IBM Patch end
 	}
 
 	for name, tc := range cases {

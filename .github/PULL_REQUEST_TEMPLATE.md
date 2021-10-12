@@ -22,7 +22,8 @@ Fixes #
 I have:
 
 - [ ] Read and followed Crossplane's [contribution process].
-- [ ] Run `make reviewable test` to ensure this PR is ready for review.
+- [ ] Run `make reviewable` to ensure this PR is ready for review.
+- [ ] Added `backport release-x.y` labels to auto-backport this PR if necessary.
 
 if the new changes require, also:
 - [ ] Extended the tests in BedrockShim repo or created an issue for it.

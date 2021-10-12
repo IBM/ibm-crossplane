@@ -1,4 +1,0 @@
-apiVersion: pkg.ibm.crossplane.io/v1alpha1
-kind: Lock
-metadata:
-  name: lock

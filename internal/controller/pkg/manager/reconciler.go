@@ -158,7 +158,7 @@ type Reconciler struct {
 }
 
 // SetupProvider adds a controller that reconciles Providers.
-func SetupProvider(mgr ctrl.Manager, l logging.Logger, namespace string) error {
+func SetupProvider(mgr ctrl.Manager, l logging.Logger, namespace, registry string) error {
 	name := "packages/" + strings.ToLower(v1.ProviderGroupKind)
 	np := func() v1.Package { return &v1.Provider{} }
 	nr := func() v1.PackageRevision { return &v1.ProviderRevision{} }
@@ -173,7 +173,7 @@ func SetupProvider(mgr ctrl.Manager, l logging.Logger, namespace string) error {
 		WithNewPackageFn(np),
 		WithNewPackageRevisionFn(nr),
 		WithNewPackageRevisionListFn(nrl),
-		WithRevisioner(NewPackageRevisioner(xpkg.NewK8sFetcher(clientset, namespace))),
+		WithRevisioner(NewPackageRevisioner(xpkg.NewK8sFetcher(clientset, namespace), WithDefaultRegistry(registry))),
 		WithLogger(l.WithValues("controller", name)),
 		WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
 	)
@@ -186,7 +186,7 @@ func SetupProvider(mgr ctrl.Manager, l logging.Logger, namespace string) error {
 }
 
 // SetupConfiguration adds a controller that reconciles Configurations.
-func SetupConfiguration(mgr ctrl.Manager, l logging.Logger, namespace string) error {
+func SetupConfiguration(mgr ctrl.Manager, l logging.Logger, namespace, registry string) error {
 	name := "packages/" + strings.ToLower(v1.ConfigurationGroupKind)
 	np := func() v1.Package { return &v1.Configuration{} }
 	nr := func() v1.PackageRevision { return &v1.ConfigurationRevision{} }
@@ -201,7 +201,7 @@ func SetupConfiguration(mgr ctrl.Manager, l logging.Logger, namespace string) er
 		WithNewPackageFn(np),
 		WithNewPackageRevisionFn(nr),
 		WithNewPackageRevisionListFn(nrl),
-		WithRevisioner(NewPackageRevisioner(xpkg.NewK8sFetcher(clientset, namespace))),
+		WithRevisioner(NewPackageRevisioner(xpkg.NewK8sFetcher(clientset, namespace), WithDefaultRegistry(registry))),
 		WithLogger(l.WithValues("controller", name)),
 		WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
 	)
@@ -242,7 +242,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	p := r.newPackage()
 	if err := r.client.Get(ctx, req.NamespacedName, p); err != nil {
-		// There's no need to requeue if we no longer exist. Otherwise we'll be
+		// There's no need to requeue if we no longer exist. Otherwise, we'll be
 		// requeued implicitly because we return an error.
 		log.Debug(errGetPackage, "error", err)
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetPackage)
@@ -259,7 +259,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
-	// End IBM Patch
+	// IBM Patch end
 
 	log = log.WithValues(
 		"uid", p.GetUID(),

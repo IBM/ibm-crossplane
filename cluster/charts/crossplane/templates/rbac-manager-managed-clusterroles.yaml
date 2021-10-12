@@ -68,6 +68,7 @@ aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
       rbac.crossplane.io/aggregate-to-browse: "true"
+{{- if not .Values.rbacManager.skipAggregatedClusterRoles }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -102,7 +103,7 @@ rules:
   verbs: ["*"]
 # Crossplane administrators have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
@@ -140,7 +141,7 @@ rules:
   verbs: [get, list, watch]
 # Crossplane editors have full access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
@@ -169,7 +170,7 @@ rules:
   verbs: [get, list, watch]
 # Crossplane viewers have read-only access to built in Crossplane types.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 - apiGroups:
@@ -196,7 +197,7 @@ rules:
 # allows them to discover and select an appropriate composition when creating a
 # resource claim.
 - apiGroups:
-  - apiextensions.crossplane.io
+  - apiextensions.ibm.crossplane.io
   resources: ["*"]
   verbs: [get, list, watch]
 {{- if .Values.rbacManager.managementPolicy }}
@@ -273,5 +274,6 @@ rules:
 - apiGroups: [""]
   resources: [events]
   verbs: [get, list, watch]
-{{- end}}
-{{- end}}
+{{- end }}
+{{- end }}
+{{- end }}

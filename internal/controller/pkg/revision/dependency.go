@@ -19,18 +19,17 @@ package revision
 import (
 	"context"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/Masterminds/semver"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	pkgmetav1 "github.com/crossplane/crossplane/apis/pkg/meta/v1"
 	v1 "github.com/crossplane/crossplane/apis/pkg/v1"
-	"github.com/crossplane/crossplane/apis/pkg/v1alpha1"
+	"github.com/crossplane/crossplane/apis/pkg/v1beta1"
 	"github.com/crossplane/crossplane/internal/dag"
 	"github.com/crossplane/crossplane/internal/xpkg"
 )
@@ -56,11 +55,11 @@ type DependencyManager interface {
 type PackageDependencyManager struct {
 	client      client.Client
 	newDag      dag.NewDAGFn
-	packageType v1alpha1.PackageType
+	packageType v1beta1.PackageType
 }
 
 // NewPackageDependencyManager creates a new PackageDependencyManager.
-func NewPackageDependencyManager(c client.Client, nd dag.NewDAGFn, t v1alpha1.PackageType) *PackageDependencyManager {
+func NewPackageDependencyManager(c client.Client, nd dag.NewDAGFn, t v1beta1.PackageType) *PackageDependencyManager {
 	return &PackageDependencyManager{
 		client:      c,
 		newDag:      nd,
@@ -76,15 +75,15 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 	}
 
 	// Copy package dependencies into Lock Dependencies.
-	sources := make([]v1alpha1.Dependency, len(pack.GetDependencies()))
+	sources := make([]v1beta1.Dependency, len(pack.GetDependencies()))
 	for i, dep := range pack.GetDependencies() {
-		pdep := v1alpha1.Dependency{}
+		pdep := v1beta1.Dependency{}
 		if dep.Configuration != nil {
 			pdep.Package = *dep.Configuration
-			pdep.Type = v1alpha1.ConfigurationPackageType
+			pdep.Type = v1beta1.ConfigurationPackageType
 		} else if dep.Provider != nil {
 			pdep.Package = *dep.Provider
-			pdep.Type = v1alpha1.ProviderPackageType
+			pdep.Type = v1beta1.ProviderPackageType
 		}
 		pdep.Constraints = dep.Version
 		sources[i] = pdep
@@ -93,7 +92,7 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 	found = len(sources)
 
 	// Get the lock.
-	lock := &v1alpha1.Lock{}
+	lock := &v1beta1.Lock{}
 	err = m.client.Get(ctx, types.NamespacedName{Name: lockName}, lock)
 	if kerrors.IsNotFound(err) {
 		// If lock does not exist and we are inactive then we can return early
@@ -113,9 +112,10 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 		return found, installed, invalid, err
 	}
 
+	lockRef := xpkg.ParsePackageSourceFromReference(prRef)
 	selfIndex := intPointer(-1)
 	d := m.newDag()
-	implied, err := d.Init(v1alpha1.ToNodes(lock.Packages...), dag.FindIndex(prRef.Context().String(), selfIndex))
+	implied, err := d.Init(v1beta1.ToNodes(lock.Packages...), dag.FindIndex(lockRef, selfIndex))
 	if err != nil {
 		return found, installed, invalid, err
 	}
@@ -131,10 +131,10 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 
 	// NOTE(hasheddan): consider adding health of package to lock so that it can
 	// be rolled up to any dependent packages.
-	self := v1alpha1.LockPackage{
+	self := v1beta1.LockPackage{
 		Name:         pr.GetName(),
 		Type:         m.packageType,
-		Source:       prRef.Context().String(),
+		Source:       lockRef,
 		Version:      prRef.Identifier(),
 		Dependencies: sources,
 	}
@@ -164,7 +164,7 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 		}
 	}
 
-	tree, err := d.TraceNode(prRef.Context().String())
+	tree, err := d.TraceNode(lockRef)
 	if err != nil {
 		return found, installed, invalid, err
 	}
@@ -190,7 +190,7 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 		if err != nil {
 			return found, installed, invalid, errors.New(errDependencyNotInGraph)
 		}
-		lp, ok := n.(*v1alpha1.LockPackage)
+		lp, ok := n.(*v1beta1.LockPackage)
 		if !ok {
 			return found, installed, invalid, errors.New(errDependencyNotLockPackage)
 		}
@@ -221,7 +221,7 @@ func (m *PackageDependencyManager) RemoveSelf(ctx context.Context, pr v1.Package
 	}
 
 	// Get the lock.
-	lock := &v1alpha1.Lock{}
+	lock := &v1beta1.Lock{}
 	err = m.client.Get(ctx, types.NamespacedName{Name: lockName}, lock)
 	if kerrors.IsNotFound(err) {
 		// If lock does not exist then we don't need to remove self.
@@ -232,8 +232,9 @@ func (m *PackageDependencyManager) RemoveSelf(ctx context.Context, pr v1.Package
 	}
 
 	// Find self and remove. If we don't exist, its a no-op.
+	lockRef := xpkg.ParsePackageSourceFromReference(prRef)
 	for i, lp := range lock.Packages {
-		if lp.Source == prRef.Context().String() {
+		if lp.Source == lockRef {
 			lock.Packages = append(lock.Packages[:i], lock.Packages[i+1:]...)
 			return m.client.Update(ctx, lock)
 		}
