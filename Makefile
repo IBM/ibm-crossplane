@@ -232,6 +232,3 @@ help-special: crossplane.help
 # ====================================================================================
 # IBM Customization
 -include ibm/Makefile.common.mk
-
-reviewable:
-	go version
