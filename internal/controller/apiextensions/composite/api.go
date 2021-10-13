@@ -328,6 +328,16 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 	d := &configv1.Configuration{}
 	s := &corev1.Secret{}
 
+	if namespace != "" && name != "" {
+		nn := types.NamespacedName{Name: "external-" + name, Namespace: namespace}
+		if err := r.client.Get(ctx, nn, s); err == nil {
+			if labels["provider"] != "" {
+				labels["provider"] = "external"
+				return
+			}
+		}
+	}
+
 	nn := types.NamespacedName{Name: configurationName}
 
 	if err := r.client.Get(ctx, nn, d); err != nil {
@@ -340,16 +350,6 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 		}
 	}
 
-	if namespace != "" && name != "" {
-		externalSecretName := "external-" + name
-		nn := types.NamespacedName{Name: externalSecretName, Namespace: namespace}
-		if err := r.client.Get(ctx, nn, s); err != nil {
-			return
-		}
-		if labels["external"] != "" {
-			labels["external"] = externalSecretName
-		}
-	}
 
 }
 
