@@ -330,7 +330,9 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *AP
 	}
 
 	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
-		labels["provider"] = provider
+		if labels["provider"] != "" {
+			labels["provider"] = provider
+		}
 	}
 }
 
