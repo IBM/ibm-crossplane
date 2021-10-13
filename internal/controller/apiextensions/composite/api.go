@@ -290,7 +290,7 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 	}
 
 	// IBM Patch: update with pre-defined default label
-	updateWithDefaultLabel(ctx, labels, r)
+	updateWithDefaultLabel(ctx, labels, cp.GetLabels(), r)
 
 	list := &v1.CompositionList{}
 	if err := r.client.List(ctx, list, client.MatchingLabels(labels)); err != nil {
@@ -319,10 +319,15 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 }
 
 // IBM Patch: update with default label from Configuration
-func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *APILabelSelectorResolver) {
+func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compositeLabels map[string]string, r *APILabelSelectorResolver) {
 
 	configurationName := "ibm-crossplane-bedrock-shim-config"
+	namespace := compositeLabels["crossplane.io/claim-namespace"]
+	name := compositeLabels["crossplane.io/claim-name"]
+
 	d := &configv1.Configuration{}
+	s := &corev1.Secret{}
+
 	nn := types.NamespacedName{Name: configurationName}
 
 	if err := r.client.Get(ctx, nn, d); err != nil {
@@ -334,6 +339,18 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *AP
 			labels["provider"] = provider
 		}
 	}
+
+	if namespace != "" && name != "" {
+		externalSecretName := "external-" + name
+		nn := types.NamespacedName{Name: externalSecretName, Namespace: namespace}
+		if err := r.client.Get(ctx, nn, s); err != nil {
+			return
+		}
+		if labels["external"] != "" {
+			labels["external"] = externalSecretName
+		}
+	}
+
 }
 
 // NewAPIDefaultCompositionSelector returns a APIDefaultCompositionSelector.
