@@ -350,7 +350,6 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 		}
 	}
 
-
 }
 
 // NewAPIDefaultCompositionSelector returns a APIDefaultCompositionSelector.
