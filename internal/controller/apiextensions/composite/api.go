@@ -328,13 +328,11 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 	d := &configv1.Configuration{}
 	s := &corev1.Secret{}
 
-	if namespace != "" && name != "" {
+	if labels["provider"] == "" && namespace != "" && name != "" {
 		nn := types.NamespacedName{Name: "external-" + name, Namespace: namespace}
 		if err := r.client.Get(ctx, nn, s); err == nil {
-			if labels["provider"] != "" {
-				labels["provider"] = "external"
-				return
-			}
+			labels["provider"] = "external"
+			return
 		}
 	}
 
@@ -345,7 +343,7 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 	}
 
 	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
-		if labels["provider"] != "" {
+		if labels["provider"] == "" {
 			labels["provider"] = provider
 		}
 	}
