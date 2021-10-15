@@ -34,6 +34,8 @@ package composite
 
 import (
 	"context"
+	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"math/rand"
 	"os"
 	"time"
@@ -326,9 +328,10 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 	name := compositeLabels["crossplane.io/claim-name"]
 
 	d := &configv1.Configuration{}
-	s := &corev1.Secret{}
+	s := &kunstructured.Unstructured{}
 
 	if labels["provider"] == "" && namespace != "" && name != "" {
+		s.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "v1",  Kind: "Secret"})
 		nn := types.NamespacedName{Name: "external-" + name, Namespace: namespace}
 		if err := r.client.Get(ctx, nn, s); err == nil {
 			labels["provider"] = "external"
