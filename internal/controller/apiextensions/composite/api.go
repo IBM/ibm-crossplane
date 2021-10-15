@@ -331,7 +331,7 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compo
 	s := &kunstructured.Unstructured{}
 
 	if labels["provider"] == "" && namespace != "" && name != "" {
-		s.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "v1",  Kind: "Secret"})
+		s.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"})
 		nn := types.NamespacedName{Name: "external-" + name, Namespace: namespace}
 		if err := r.client.Get(ctx, nn, s); err == nil {
 			labels["provider"] = "external"
