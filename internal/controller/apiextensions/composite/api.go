@@ -38,6 +38,7 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	configv1 "github.com/crossplane/crossplane/apis/pkg/v1"
@@ -47,6 +48,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -290,7 +292,7 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 	}
 
 	// IBM Patch: update with pre-defined default label
-	updateWithDefaultLabel(ctx, labels, r)
+	updateWithDefaultLabel(ctx, labels, cp.GetLabels(), r)
 
 	list := &v1.CompositionList{}
 	if err := r.client.List(ctx, list, client.MatchingLabels(labels)); err != nil {
@@ -319,10 +321,24 @@ func (r *APILabelSelectorResolver) SelectComposition(ctx context.Context, cp res
 }
 
 // IBM Patch: update with default label from Configuration
-func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *APILabelSelectorResolver) {
+func updateWithDefaultLabel(ctx context.Context, labels map[string]string, compositeLabels map[string]string, r *APILabelSelectorResolver) {
 
 	configurationName := "ibm-crossplane-bedrock-shim-config"
+	namespace := compositeLabels["crossplane.io/claim-namespace"]
+	name := compositeLabels["crossplane.io/claim-name"]
+
 	d := &configv1.Configuration{}
+	s := &kunstructured.Unstructured{}
+
+	if labels["provider"] == "" && namespace != "" && name != "" {
+		s.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"})
+		nn := types.NamespacedName{Name: "external-" + name, Namespace: namespace}
+		if err := r.client.Get(ctx, nn, s); err == nil {
+			labels["provider"] = "external"
+			return
+		}
+	}
+
 	nn := types.NamespacedName{Name: configurationName}
 
 	if err := r.client.Get(ctx, nn, d); err != nil {
@@ -330,8 +346,11 @@ func updateWithDefaultLabel(ctx context.Context, labels map[string]string, r *AP
 	}
 
 	if provider := d.Labels["ibm-crossplane-provider"]; provider != "" {
-		labels["provider"] = provider
+		if labels["provider"] == "" {
+			labels["provider"] = provider
+		}
 	}
+
 }
 
 // NewAPIDefaultCompositionSelector returns a APIDefaultCompositionSelector.
