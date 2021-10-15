@@ -198,6 +198,15 @@ type ConnectionDetail struct {
 	// FromConnectionSecretKey when set.
 	// +optional
 	Value *string `json:"value,omitempty"`
+
+	// IBM Patch: Add json parser to secret fields
+	// FromConnectionSecretKeyJSONPath is the json path, that is used if given field is a json,
+	// Crossplane will retrieve a value based on this path. Considered only if FromConnectionSecretKey
+	// is not empty.
+	// +optional
+	FromConnectionSecretKeyJSONPath *string `json:"fromConnectionSecretKeyJSONPath,omitempty"`
+	// IBM Patch end: Add json parser to secret fields
+
 }
 
 // +kubebuilder:object:root=true
