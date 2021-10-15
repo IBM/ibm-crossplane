@@ -404,8 +404,8 @@ func (in *ConnectionDetail) DeepCopyInto(out *ConnectionDetail) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.FromConnectionSecretKeyJSONPath != nil {
-		in, out := &in.FromConnectionSecretKeyJSONPath, &out.FromConnectionSecretKeyJSONPath
+	if in.JSONPath != nil {
+		in, out := &in.JSONPath, &out.JSONPath
 		*out = new(string)
 		**out = **in
 	}
