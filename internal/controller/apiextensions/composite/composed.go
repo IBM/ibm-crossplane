@@ -489,7 +489,7 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 				key = *d.Name
 			}
 			if key != "" {
-				value, err := getJSONValueByPath(data[*d.FromConnectionSecretKey], d.JSONPath)
+				value, err := getJSONValueByPath(data[*d.FromConnectionSecretKey], *d.JSONPath)
 				if err != nil {
 					return nil, errors.Wrap(err, fmt.Sprintf(errGetValueByJSONPath, *d.JSONPath))
 				}
@@ -535,13 +535,13 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 
 // IBM Patch: Add json parser to secret fields
 // Function to extract a value from given json
-func getJSONValueByPath(jsonBytes []byte, path *string) (string, error) {
+func getJSONValueByPath(jsonBytes []byte, path string) (string, error) {
 	var jsonMap map[string]interface{}
 
 	if err := json.Unmarshal(jsonBytes, &jsonMap); err != nil {
 		return "", err
 	}
-	iv, err := jsonpath.Read(jsonMap, "$"+*path)
+	iv, err := jsonpath.Read(jsonMap, "$"+path)
 	if err != nil {
 		return "", err
 	}
