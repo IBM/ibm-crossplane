@@ -864,6 +864,7 @@ func TestConnectionDetailType(t *testing.T) {
 	value := "coolvalue"
 	key := "coolkey"
 	field := "coolfield"
+	innerJsonPath := "cool.json.path"
 
 	cases := map[string]struct {
 		d    v1.ConnectionDetail
@@ -900,6 +901,14 @@ func TestConnectionDetailType(t *testing.T) {
 				FromFieldPath: &field,
 			},
 			want: v1.ConnectionDetailTypeFromFieldPath,
+		},
+		"ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath": {
+			d: v1.ConnectionDetail{
+				Name:                    &name,
+				FromConnectionSecretKey: &key,
+				JSONPath:                &innerJsonPath,
+			},
+			want: v1.ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath,
 		},
 	}
 
