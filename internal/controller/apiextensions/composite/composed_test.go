@@ -532,12 +532,14 @@ func TestFetch(t *testing.T) {
 	fromKey := v1.ConnectionDetailTypeFromConnectionSecretKey
 	fromVal := v1.ConnectionDetailTypeFromValue
 	fromField := v1.ConnectionDetailTypeFromFieldPath
+	fromKeyWithJSONPath := v1.ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath
 
 	sref := &xpv1.SecretReference{Name: "foo", Namespace: "bar"}
 	s := &corev1.Secret{
 		Data: map[string][]byte{
-			"foo": []byte("a"),
-			"bar": []byte("b"),
+			"foo":                       []byte("a"),
+			"bar":                       []byte("b"),
+			"secretFieldContainingJSON": []byte("{\"cool\": {\"path\":\"value555\"}}"),
 		},
 	}
 
@@ -633,6 +635,12 @@ func TestFetch(t *testing.T) {
 						Value: pointer.StringPtr("value"),
 						Type:  &fromVal,
 					},
+					{
+						Name:                    pointer.StringPtr("output"),
+						FromConnectionSecretKey: pointer.StringPtr("secretFieldContainingJSON"),
+						JSONPath:                pointer.StringPtr(".cool.path"),
+						Type:                    &fromKeyWithJSONPath,
+					},
 				}},
 			},
 			want: want{
@@ -640,6 +648,7 @@ func TestFetch(t *testing.T) {
 					"convfoo": s.Data["foo"],
 					"bar":     s.Data["bar"],
 					"fixed":   []byte("value"),
+					"output":  []byte("value555"),
 				},
 			},
 		},
