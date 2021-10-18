@@ -157,10 +157,11 @@ type ConnectionDetailType string
 
 // ConnectionDetailType types.
 const (
-	ConnectionDetailTypeUnknown                 ConnectionDetailType = "Unknown"
-	ConnectionDetailTypeFromConnectionSecretKey ConnectionDetailType = "FromConnectionSecretKey"
-	ConnectionDetailTypeFromFieldPath           ConnectionDetailType = "FromFieldPath"
-	ConnectionDetailTypeFromValue               ConnectionDetailType = "FromValue"
+	ConnectionDetailTypeUnknown                             ConnectionDetailType = "Unknown"
+	ConnectionDetailTypeFromConnectionSecretKey             ConnectionDetailType = "FromConnectionSecretKey"
+	ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath ConnectionDetailType = "JSONPath"
+	ConnectionDetailTypeFromFieldPath                       ConnectionDetailType = "FromFieldPath"
+	ConnectionDetailTypeFromValue                           ConnectionDetailType = "FromValue"
 )
 
 // ConnectionDetail includes the information about the propagation of the connection
@@ -198,6 +199,15 @@ type ConnectionDetail struct {
 	// FromConnectionSecretKey when set.
 	// +optional
 	Value *string `json:"value,omitempty"`
+
+	// IBM Patch: Add json parser to secret fields
+	// JSONPath is the json path, that is used if given field is a json,
+	// Crossplane will retrieve a value based on this path. Considered only if FromConnectionSecretKey
+	// is not empty.
+	// +optional
+	JSONPath *string `json:"JSONPath,omitempty"`
+	// IBM Patch end: Add json parser to secret fields
+
 }
 
 // +kubebuilder:object:root=true

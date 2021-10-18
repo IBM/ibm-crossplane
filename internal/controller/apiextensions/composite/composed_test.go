@@ -532,12 +532,14 @@ func TestFetch(t *testing.T) {
 	fromKey := v1.ConnectionDetailTypeFromConnectionSecretKey
 	fromVal := v1.ConnectionDetailTypeFromValue
 	fromField := v1.ConnectionDetailTypeFromFieldPath
+	fromKeyWithJSONPath := v1.ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath
 
 	sref := &xpv1.SecretReference{Name: "foo", Namespace: "bar"}
 	s := &corev1.Secret{
 		Data: map[string][]byte{
-			"foo": []byte("a"),
-			"bar": []byte("b"),
+			"foo":                       []byte("a"),
+			"bar":                       []byte("b"),
+			"secretFieldContainingJSON": []byte("{\"cool\": {\"path\":\"value555\"}}"),
 		},
 	}
 
@@ -633,6 +635,12 @@ func TestFetch(t *testing.T) {
 						Value: pointer.StringPtr("value"),
 						Type:  &fromVal,
 					},
+					{
+						Name:                    pointer.StringPtr("output"),
+						FromConnectionSecretKey: pointer.StringPtr("secretFieldContainingJSON"),
+						JSONPath:                pointer.StringPtr(".cool.path"),
+						Type:                    &fromKeyWithJSONPath,
+					},
 				}},
 			},
 			want: want{
@@ -640,6 +648,7 @@ func TestFetch(t *testing.T) {
 					"convfoo": s.Data["foo"],
 					"bar":     s.Data["bar"],
 					"fixed":   []byte("value"),
+					"output":  []byte("value555"),
 				},
 			},
 		},
@@ -864,6 +873,7 @@ func TestConnectionDetailType(t *testing.T) {
 	value := "coolvalue"
 	key := "coolkey"
 	field := "coolfield"
+	innerJSONPath := "cool.json.path"
 
 	cases := map[string]struct {
 		d    v1.ConnectionDetail
@@ -900,6 +910,14 @@ func TestConnectionDetailType(t *testing.T) {
 				FromFieldPath: &field,
 			},
 			want: v1.ConnectionDetailTypeFromFieldPath,
+		},
+		"ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath": {
+			d: v1.ConnectionDetail{
+				Name:                    &name,
+				FromConnectionSecretKey: &key,
+				JSONPath:                &innerJSONPath,
+			},
+			want: v1.ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath,
 		},
 	}
 
@@ -1071,6 +1089,127 @@ func TestIsReady(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.want.ready, ready); diff != "" {
 				t.Errorf("\n%s\nIsReady(...): -want, +got:\n%s", tc.reason, diff)
+			}
+		})
+	}
+}
+
+func TestGetJSONValueByPath(t *testing.T) {
+	type args struct {
+		jsonBytes []byte
+		path      string
+	}
+	type want struct {
+		out string
+		err error
+	}
+	cases := map[string]struct {
+		reason string
+		args
+		want
+	}{
+		"OkUnmarshallJSON": {
+			reason: "Given path should be applied to successfully retrieve wanted value.",
+			args: args{
+				jsonBytes: []byte(`
+					{
+						"cool": {
+							"path": "value123"
+  						}
+					}
+				`),
+				path: ".cool.path",
+			},
+			want: want{
+				out: "value123",
+				err: nil,
+			},
+		},
+		"OkUnmarshallJSONArray": {
+			reason: "Given path with array element index should be correct.",
+			args: args{
+				jsonBytes: []byte(`
+					{
+						"cool": {
+							"array": [
+								"value333",
+								"value555",
+								"value999"
+							]
+  						}
+					}
+				`),
+				path: ".cool.array[2]",
+			},
+			want: want{
+				out: "value999",
+				err: nil,
+			},
+		},
+		"CannotUnmarshallJSON": {
+			reason: "Invalid json body should cause an error.",
+			args: args{
+				jsonBytes: []byte(`
+					{
+						"cool": {
+							"path": "value123"
+  						}cannot unmarshall because of unexpected string here 
+					}
+				`),
+				path: ".cool.path",
+			},
+			want: want{
+				out: "",
+				err: errors.New("invalid character 'c' after object key:value pair"),
+			},
+		},
+		"CannotGetThisJSONKey": {
+			reason: "Nonexisting key should return an error.",
+			args: args{
+				jsonBytes: []byte(`
+					{
+						"cool": {
+							"path": "value123"
+  						} 
+					}
+				`),
+				path: ".cool.path.nonexistingkey",
+			},
+			want: want{
+				out: "",
+				err: errors.New("expected JSON object to access child 'nonexistingkey' at 13"),
+			},
+		},
+		"ValueIsNotSingleString": {
+			reason: "Returned value should be a single string (not empty and not an object with nested fields).",
+			args: args{
+				jsonBytes: []byte(`
+					{
+						"cool": {
+							"path": "value123"
+  						} 
+					}
+				`),
+				path: ".cool",
+			},
+			want: want{
+				out: "",
+				err: errors.New("Cannot use type assertion 'string' for underlying value. Value is empty or has nested fields"),
+			},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			out, err := getJSONValueByPath(tc.args.jsonBytes, tc.args.path)
+
+			if tc.want.err == nil && err != nil {
+				t.Errorf("\n%s\ngetJSONValueByPath(...): wanted nil but got error: \n%s", tc.reason, err)
+			}
+			if tc.want.err != nil && err == nil {
+				t.Errorf("\n%s\ngetJSONValueByPath(...): wanted error: \n%s but got nil", tc.reason, tc.want.err)
+			}
+			if diff := cmp.Diff(tc.want.out, out); diff != "" {
+				t.Errorf("\n%s\ngetJSONValueByPath(...): -want, +got:\n%s", tc.reason, diff)
 			}
 		})
 	}

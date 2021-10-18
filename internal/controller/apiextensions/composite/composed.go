@@ -35,6 +35,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/yalp/jsonpath"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -70,10 +72,12 @@ const (
 	errKindChanged = "cannot change the kind of an existing composed resource"
 	errName        = "cannot use dry-run create to name composed resource"
 
-	errFmtPatch          = "cannot apply the patch at index %d"
-	errFmtConnDetailKey  = "connection detail of type %q key is not set"
-	errFmtConnDetailVal  = "connection detail of type %q value is not set"
-	errFmtConnDetailPath = "connection detail of type %q fromFieldPath is not set"
+	errFmtPatch                   = "cannot apply the patch at index %d"
+	errFmtConnDetailKey           = "connection detail of type %q key is not set"
+	errFmtConnDetailKeyOrJSONPath = "connection detail of type %q key or JSONPath is not set"
+	errFmtConnDetailVal           = "connection detail of type %q value is not set"
+	errFmtConnDetailPath          = "connection detail of type %q fromFieldPath is not set"
+	errGetValueByJSONPath         = "cannot get json value for given path: '%s' with connection detail of type FromConnectionSecretKey"
 )
 
 // Annotation keys.
@@ -470,6 +474,28 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 			default:
 				conn[*d.Name] = []byte(*d.Value)
 			}
+		// IBM Patch: Add json parser to secret fields
+		case v1.ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath:
+			if d.FromConnectionSecretKey == nil || d.JSONPath == nil {
+				return nil, errors.Errorf(errFmtConnDetailKeyOrJSONPath, tp)
+			}
+			if data[*d.FromConnectionSecretKey] == nil {
+				// We don't consider this an error because it's possible the
+				// key will still be written at some point in the future.
+				continue
+			}
+			key := *d.FromConnectionSecretKey
+			if d.Name != nil {
+				key = *d.Name
+			}
+			if key != "" {
+				value, err := getJSONValueByPath(data[*d.FromConnectionSecretKey], *d.JSONPath)
+				if err != nil {
+					return nil, errors.Wrap(err, fmt.Sprintf(errGetValueByJSONPath, *d.JSONPath))
+				}
+				conn[key] = []byte(value)
+			}
+		// IBM Patch end: Add json parser to secret fields
 		case v1.ConnectionDetailTypeFromConnectionSecretKey:
 			if d.FromConnectionSecretKey == nil {
 				return nil, errors.Errorf(errFmtConnDetailKey, tp)
@@ -507,6 +533,25 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 	return conn, nil
 }
 
+// IBM Patch: Add json parser to secret fields
+// Function to extract a value from given json
+func getJSONValueByPath(jsonBytes []byte, path string) (string, error) {
+	var jsonMap map[string]interface{}
+
+	if err := json.Unmarshal(jsonBytes, &jsonMap); err != nil {
+		return "", err
+	}
+	iv, err := jsonpath.Read(jsonMap, "$"+path)
+	if err != nil {
+		return "", err
+	}
+	value, ok := iv.(string)
+	if !ok {
+		return "", errors.New("Cannot use type assertion 'string' for underlying value. Value is empty or has nested fields")
+	}
+	return value, nil
+}
+
 // Originally there was no 'type' determinator field so Crossplane would infer
 // the type. We maintain this behaviour for backward compatibility when no type
 // is set.
@@ -516,6 +561,10 @@ func connectionDetailType(d v1.ConnectionDetail) v1.ConnectionDetailType {
 		return *d.Type
 	case d.Name != nil && d.Value != nil:
 		return v1.ConnectionDetailTypeFromValue
+	// IBM Patch: Add json parser to secret fields
+	case d.JSONPath != nil:
+		return v1.ConnectionDetailTypeFromConnectionSecretKeyWithJSONPath
+	// IBM Patch and: Add json parser to secret fields
 	case d.FromConnectionSecretKey != nil:
 		return v1.ConnectionDetailTypeFromConnectionSecretKey
 	case d.FromFieldPath != nil:
