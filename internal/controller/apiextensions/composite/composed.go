@@ -37,6 +37,8 @@ import (
 
 	"github.com/yalp/jsonpath"
 
+	b64 "encoding/base64"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -77,7 +79,8 @@ const (
 	errFmtConnDetailKeyOrJSONPath = "connection detail of type %q key or JSONPath is not set"
 	errFmtConnDetailVal           = "connection detail of type %q value is not set"
 	errFmtConnDetailPath          = "connection detail of type %q fromFieldPath is not set"
-	errGetValueByJSONPath         = "cannot get json value for given path: '%s' with connection detail of type FromConnectionSecretKey"
+	errFmtGetValueByJSONPath      = "cannot get json value for given path: '%s' with connection detail of type FromConnectionSecretKey"
+	errFmtDecodeBase64            = "cannot decode string '%s' using base64"
 )
 
 // Annotation keys.
@@ -491,8 +494,17 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 			if key != "" {
 				value, err := getJSONValueByPath(data[*d.FromConnectionSecretKey], *d.JSONPath)
 				if err != nil {
-					return nil, errors.Wrap(err, fmt.Sprintf(errGetValueByJSONPath, *d.JSONPath))
+					return nil, errors.Wrap(err, fmt.Sprintf(errFmtGetValueByJSONPath, *d.JSONPath))
 				}
+
+				if d.DecodeBase64 != nil && *d.DecodeBase64 == "true" {
+					vb, err := b64.StdEncoding.DecodeString(value)
+					if err != nil {
+						return nil, errors.Wrap(err, fmt.Sprintf(errFmtDecodeBase64, value))
+					}
+					value = string(vb)
+				}
+
 				conn[key] = []byte(value)
 			}
 		// IBM Patch end: Add json parser to secret fields
@@ -545,10 +557,7 @@ func getJSONValueByPath(jsonBytes []byte, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	value, ok := iv.(string)
-	if !ok {
-		return "", errors.New("Cannot use type assertion 'string' for underlying value. Value is empty or has nested fields")
-	}
+	value := fmt.Sprintf("%v", iv)
 	return value, nil
 }
 

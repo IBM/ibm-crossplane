@@ -537,9 +537,11 @@ func TestFetch(t *testing.T) {
 	sref := &xpv1.SecretReference{Name: "foo", Namespace: "bar"}
 	s := &corev1.Secret{
 		Data: map[string][]byte{
-			"foo":                       []byte("a"),
-			"bar":                       []byte("b"),
-			"secretFieldContainingJSON": []byte("{\"cool\": {\"path\":\"value555\"}}"),
+			"foo":                                    []byte("a"),
+			"bar":                                    []byte("b"),
+			"secretFieldContainingJSON":              []byte("{\"cool\": {\"path\":\"value555\"}}"),
+			"secretFieldContainingBase64EncodedJSON": []byte("{\"cool\": {\"encodedPath\":\"SV9XSUxMX0JFX0VOQ09ERUQK\"}}"),
+			"simpleEncoded":                          []byte("{\"simple\": \"ZW5jb2RlZCB2YWx1ZQo=\"}"),
 		},
 	}
 
@@ -641,14 +643,22 @@ func TestFetch(t *testing.T) {
 						JSONPath:                pointer.StringPtr(".cool.path"),
 						Type:                    &fromKeyWithJSONPath,
 					},
+					{
+						Name:                    pointer.StringPtr("outputDecoded"),
+						FromConnectionSecretKey: pointer.StringPtr("secretFieldContainingBase64EncodedJSON"),
+						JSONPath:                pointer.StringPtr(".cool.encodedPath"),
+						DecodeBase64:            pointer.StringPtr("true"),
+						Type:                    &fromKeyWithJSONPath,
+					},
 				}},
 			},
 			want: want{
 				conn: managed.ConnectionDetails{
-					"convfoo": s.Data["foo"],
-					"bar":     s.Data["bar"],
-					"fixed":   []byte("value"),
-					"output":  []byte("value555"),
+					"convfoo":       s.Data["foo"],
+					"bar":           s.Data["bar"],
+					"fixed":         []byte("value"),
+					"output":        []byte("value555"),
+					"outputDecoded": []byte("I_WILL_BE_ENCODED\n"), // expect also newline
 				},
 			},
 		},
@@ -849,6 +859,39 @@ func TestFetch(t *testing.T) {
 			want: want{
 				conn: managed.ConnectionDetails{
 					"generation": []byte("4"),
+				},
+			},
+		},
+		"SuccessFromConnectionSecretDecodeBase64": {
+			reason: "Should publish the secret keys with decoded value",
+			args: args{
+				kube: &test.MockClient{MockGet: func(_ context.Context, key client.ObjectKey, obj client.Object) error {
+					if sobj, ok := obj.(*corev1.Secret); ok {
+						if key.Name == sref.Name && key.Namespace == sref.Namespace {
+							s.DeepCopyInto(sobj)
+							return nil
+						}
+					}
+					t.Errorf("wrong secret is queried")
+					return errBoom
+				}},
+				cd: &fake.Composed{
+					ConnectionSecretWriterTo: fake.ConnectionSecretWriterTo{Ref: sref},
+					ObjectMeta:               metav1.ObjectMeta{},
+				},
+				t: v1.ComposedTemplate{ConnectionDetails: []v1.ConnectionDetail{
+					{
+						Name:                    pointer.StringPtr("decoded"),
+						FromConnectionSecretKey: pointer.StringPtr("simpleEncoded"),
+						JSONPath:                pointer.StringPtr(".simple"),
+						DecodeBase64:            pointer.StringPtr("true"),
+						Type:                    &fromKeyWithJSONPath,
+					},
+				}},
+			},
+			want: want{
+				conn: managed.ConnectionDetails{
+					"decoded": []byte("encoded value\n"),
 				},
 			},
 		},
@@ -1178,23 +1221,6 @@ func TestGetJSONValueByPath(t *testing.T) {
 			want: want{
 				out: "",
 				err: errors.New("expected JSON object to access child 'nonexistingkey' at 13"),
-			},
-		},
-		"ValueIsNotSingleString": {
-			reason: "Returned value should be a single string (not empty and not an object with nested fields).",
-			args: args{
-				jsonBytes: []byte(`
-					{
-						"cool": {
-							"path": "value123"
-  						} 
-					}
-				`),
-				path: ".cool",
-			},
-			want: want{
-				out: "",
-				err: errors.New("Cannot use type assertion 'string' for underlying value. Value is empty or has nested fields"),
 			},
 		},
 	}
