@@ -280,6 +280,10 @@ spec:
                               this path. Considered only if FromConnectionSecretKey
                               is not empty.'
                             type: string
+                          decodeBase64:
+                            description: DecodeBase64 is a flag indicating if a value
+                              retrieved from json (using JSONPath) should be decoded
+                            type: string
                           fromConnectionSecretKey:
                             description: FromConnectionSecretKey is the key that will
                               be used to fetch the value from the given target resource's
