@@ -497,7 +497,7 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 					return nil, errors.Wrap(err, fmt.Sprintf(errFmtGetValueByJSONPath, *d.JSONPath))
 				}
 
-				if d.DecodeBase64 != nil && *d.DecodeBase64 == "true" {
+				if d.DecodeBase64 != nil && *d.DecodeBase64 {
 					vb, err := b64.StdEncoding.DecodeString(value)
 					if err != nil {
 						return nil, errors.Wrap(err, fmt.Sprintf(errFmtDecodeBase64, value))
