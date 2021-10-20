@@ -209,7 +209,7 @@ type ConnectionDetail struct {
 
 	// DecodeBase64 is a flag indicating if a value retrieved from json (using JSONPath) should be decoded
 	// +optional
-	DecodeBase64 *string `json:"decodeBase64,omitempty"`
+	DecodeBase64 *bool `json:"decodeBase64,omitempty"`
 	// IBM Patch end: Add json parser to secret fields
 
 }

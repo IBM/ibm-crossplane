@@ -411,7 +411,7 @@ func (in *ConnectionDetail) DeepCopyInto(out *ConnectionDetail) {
 	}
 	if in.DecodeBase64 != nil {
 		in, out := &in.DecodeBase64, &out.DecodeBase64
-		*out = new(string)
+		*out = new(bool)
 		**out = **in
 	}
 }
