@@ -53,6 +53,7 @@ func (i *K8sFetcher) Fetch(ctx context.Context, ref name.Reference, secrets ...s
 	auth, err := k8schain.New(ctx, i.client, k8schain.Options{
 		Namespace:        i.namespace,
 		ImagePullSecrets: secrets,
+		ServiceAccountName: "ibm-crossplane",
 	})
 	if err != nil {
 		return nil, err
@@ -65,6 +66,7 @@ func (i *K8sFetcher) Head(ctx context.Context, ref name.Reference, secrets ...st
 	auth, err := k8schain.New(ctx, i.client, k8schain.Options{
 		Namespace:        i.namespace,
 		ImagePullSecrets: secrets,
+		ServiceAccountName: "ibm-crossplane",
 	})
 	if err != nil {
 		return nil, err
@@ -77,6 +79,7 @@ func (i *K8sFetcher) Tags(ctx context.Context, ref name.Reference, secrets ...st
 	auth, err := k8schain.New(ctx, i.client, k8schain.Options{
 		Namespace:        i.namespace,
 		ImagePullSecrets: secrets,
+		ServiceAccountName: "ibm-crossplane",
 	})
 	if err != nil {
 		return nil, err
