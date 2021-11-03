@@ -51,8 +51,8 @@ func NewK8sFetcher(client kubernetes.Interface, namespace string) *K8sFetcher {
 // Fetch fetches a package image.
 func (i *K8sFetcher) Fetch(ctx context.Context, ref name.Reference, secrets ...string) (v1.Image, error) {
 	auth, err := k8schain.New(ctx, i.client, k8schain.Options{
-		Namespace:        i.namespace,
-		ImagePullSecrets: secrets,
+		Namespace:          i.namespace,
+		ImagePullSecrets:   secrets,
 		ServiceAccountName: "ibm-crossplane",
 	})
 	if err != nil {
@@ -64,8 +64,8 @@ func (i *K8sFetcher) Fetch(ctx context.Context, ref name.Reference, secrets ...s
 // Head fetches a package descriptor.
 func (i *K8sFetcher) Head(ctx context.Context, ref name.Reference, secrets ...string) (*v1.Descriptor, error) {
 	auth, err := k8schain.New(ctx, i.client, k8schain.Options{
-		Namespace:        i.namespace,
-		ImagePullSecrets: secrets,
+		Namespace:          i.namespace,
+		ImagePullSecrets:   secrets,
 		ServiceAccountName: "ibm-crossplane",
 	})
 	if err != nil {
@@ -77,8 +77,8 @@ func (i *K8sFetcher) Head(ctx context.Context, ref name.Reference, secrets ...st
 // Tags fetches a package's tags.
 func (i *K8sFetcher) Tags(ctx context.Context, ref name.Reference, secrets ...string) ([]string, error) {
 	auth, err := k8schain.New(ctx, i.client, k8schain.Options{
-		Namespace:        i.namespace,
-		ImagePullSecrets: secrets,
+		Namespace:          i.namespace,
+		ImagePullSecrets:   secrets,
 		ServiceAccountName: "ibm-crossplane",
 	})
 	if err != nil {
