@@ -29,8 +29,8 @@ import (
 
 var (
 	replicas                 = int32(1)
-	runAsUser                = int64(2000)
-	runAsGroup               = int64(2000)
+	runAsUser                = int64(1000590000)
+	runAsGroup               = int64(1000590000)
 	allowPrivilegeEscalation = false
 	privileged               = false
 	runAsNonRoot             = true
@@ -74,8 +74,11 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 					ImagePullSecrets:   revision.GetPackagePullSecrets(),
 					Containers: []corev1.Container{
 						{
-							Name:            provider.GetName(),
-							Image:           provider.Spec.Controller.Image,
+							Name:  provider.GetName(),
+							Image: provider.Spec.Controller.Image,
+							Args: []string{
+								"--debug",
+							},
 							ImagePullPolicy: pullPolicy,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser:                &runAsUser,
