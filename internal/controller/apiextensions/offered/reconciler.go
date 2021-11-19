@@ -286,16 +286,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
-	// IBM Patch: Add ownerReference to claim CRD
-	controlRef := meta.AsController(meta.TypedReferenceTo(d, d.GetObjectKind().GroupVersionKind()))
-	meta.AddOwnerReference(crd, controlRef)
-	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
-		log.Debug(errApplyCRD, "error", err)
-		r.record.Event(d, event.Warning(reasonApplyCRD, errors.Wrap(err, errApplyCRD)))
-		return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, d), errApplyCRD)
-	}
-	// IBM Patch end
-
 	r.record.Event(d, event.Normal(reasonRenderCRD, "Rendered composite resource claim CustomResourceDefinition"))
 
 	if meta.WasDeleted(d) {
@@ -387,6 +377,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// a tiny wait just in case the CRD isn't gone after the first requeue.
 		return reconcile.Result{RequeueAfter: tinyWait}, nil
 	}
+
+	// IBM Patch: Add ownerReference to claim CRD
+	controlRef := meta.AsController(meta.TypedReferenceTo(d, d.GetObjectKind().GroupVersionKind()))
+	meta.AddOwnerReference(crd, controlRef)
+	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+		log.Debug(errApplyCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonApplyCRD, errors.Wrap(err, errApplyCRD)))
+		return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, d), errApplyCRD)
+	}
+	// IBM Patch end
 
 	if err := r.claim.AddFinalizer(ctx, d); err != nil {
 		log.Debug(errAddFinalizer, "error", err)
