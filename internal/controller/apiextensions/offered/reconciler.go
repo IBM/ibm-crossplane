@@ -83,6 +83,8 @@ const (
 	errDeleteCRD       = "cannot delete composite resource claim CustomResourceDefinition"
 	errListCRs         = "cannot list defined composite resource claims"
 	errDeleteCR        = "cannot delete defined composite resource claim"
+	// IBM Patch
+	errApplyCRD = "cannot apply composite resource claim CustomResourceDefinition"
 )
 
 // Wait strings.
@@ -96,6 +98,8 @@ const (
 	reasonRenderCRD event.Reason = "RenderCRD"
 	reasonOfferXRC  event.Reason = "OfferClaim"
 	reasonRedactXRC event.Reason = "RedactClaim"
+	// IBM Patch
+	reasonApplyCRD event.Reason = "ApplyCRD"
 )
 
 // A ControllerEngine can start and stop Kubernetes controllers on demand.
@@ -281,6 +285,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.record.Event(d, event.Warning(reasonRenderCRD, err))
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
+
+	// IBM Patch: Add ownerReference to claim CRD
+	controlRef := meta.AsController(meta.TypedReferenceTo(d, d.GetObjectKind().GroupVersionKind()))
+	meta.AddOwnerReference(crd, controlRef)
+	if err := r.client.Apply(ctx, crd, resource.MustBeControllableBy(d.GetUID())); err != nil {
+		log.Debug(errApplyCRD, "error", err)
+		r.record.Event(d, event.Warning(reasonApplyCRD, errors.Wrap(err, errApplyCRD)))
+		return reconcile.Result{RequeueAfter: shortWait}, errors.Wrap(r.client.Status().Update(ctx, d), errApplyCRD)
+	}
+	// IBM Patch end
 
 	r.record.Event(d, event.Normal(reasonRenderCRD, "Rendered composite resource claim CustomResourceDefinition"))
 
