@@ -399,7 +399,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	o := kcontroller.Options{Reconciler: claim.NewReconciler(r.mgr,
 		r.clientForSecrets,
-		meta.AsController(meta.TypedReferenceTo(d, d.GetObjectKind().GroupVersionKind())),
+		meta.AsOwner(meta.TypedReferenceTo(d, d.GetObjectKind().GroupVersionKind())),
 		resource.CompositeClaimKind(d.GetClaimGroupVersionKind()),
 		resource.CompositeKind(d.GetCompositeGroupVersionKind()),
 		claim.WithLogger(log.WithValues("controller", claim.ControllerName(d.GetName()))),

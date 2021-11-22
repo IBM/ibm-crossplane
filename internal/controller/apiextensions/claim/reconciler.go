@@ -377,18 +377,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{Requeue: false}, nil
 	}
 
-	// IBM Patch: Add ownerReference to claim and composite CRs
+	// IBM Patch: Add ownerReference to claim CRs
 	meta.AddOwnerReference(cm, r.ownerRef)
 	if err := r.client.Apply(ctx, cm); err != nil {
 		log.Debug(errApplyClaim, "error", err)
 		record.Event(cm, event.Warning(reasonClaimApply, err))
-		return reconcile.Result{RequeueAfter: aShortWait}, nil
-	}
-
-	meta.AddOwnerReference(cp, r.ownerRef)
-	if err := r.client.Apply(ctx, cp); err != nil {
-		log.Debug(errApplyComposite, "error", err)
-		record.Event(cp, event.Warning(reasonCompositeApply, err))
 		return reconcile.Result{RequeueAfter: aShortWait}, nil
 	}
 	// IBM Patch end
@@ -433,6 +426,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		cm.SetConditions(xpv1.Unavailable().WithMessage(err.Error()))
 		return reconcile.Result{RequeueAfter: aShortWait}, errors.Wrap(r.client.Status().Update(ctx, cm), errUpdateClaimStatus)
 	}
+
+	// IBM Patch: Add ownerReferences to Composite
+	meta.AddOwnerReference(cp, r.ownerRef)
 
 	if err := r.client.Apply(ctx, cp); err != nil {
 		// If we didn't hit this error last time we'll be requeued
