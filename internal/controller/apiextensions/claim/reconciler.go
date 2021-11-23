@@ -265,12 +265,12 @@ func NewReconciler(m manager.Manager, cfs client.Client, of resource.CompositeCl
 		newComposite: func() resource.Composite {
 			return composite.New(composite.WithGroupVersionKind(schema.GroupVersionKind(with)))
 		},
-		claim: defaultCRClaim(c),
 		// IBM Patch: Remove cluster permission for Secrets
 		// applied client has been changed to `cfs` as it is a client without cluster scope informers
 		// used for secrets manipulations
 		composite: defaultCRComposite(c, cfs),
 		// IBM Patch: end
+		claim:  defaultCRClaim(c),
 		log:    logging.NewNopLogger(),
 		record: event.NewNopRecorder(),
 	}

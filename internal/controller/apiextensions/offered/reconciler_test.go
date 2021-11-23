@@ -379,46 +379,10 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: tinyWait},
 			},
 		},
-		"DeleteCustomResourceDefinitionError": {
-			reason: "We should requeue after a short wait if we encounter an error while deleting the CRD we created.",
-			args: args{
-				mgr: &fake.Manager{},
-				opts: []ReconcilerOption{
-					WithClientApplicator(resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
-								switch v := o.(type) {
-								case *v1.CompositeResourceDefinition:
-									d := v1.CompositeResourceDefinition{
-										Spec: v1.CompositeResourceDefinitionSpec{},
-									}
-									d.SetUID(owner)
-									d.SetDeletionTimestamp(&now)
-									*v = d
-								case *extv1.CustomResourceDefinition:
-									crd := extv1.CustomResourceDefinition{}
-									crd.SetCreationTimestamp(now)
-									crd.SetOwnerReferences([]metav1.OwnerReference{{UID: owner, Controller: &ctrlr}})
-									*v = crd
-								}
-								return nil
-							}),
-							MockList:         test.NewMockListFn(nil),
-							MockDelete:       test.NewMockDeleteFn(errBoom),
-							MockStatusUpdate: test.NewMockStatusUpdateFn(nil),
-						},
-					}),
-					WithCRDRenderer(CRDRenderFn(func(_ *v1.CompositeResourceDefinition) (*extv1.CustomResourceDefinition, error) {
-						return &extv1.CustomResourceDefinition{}, nil
-					})),
-				},
-			},
-			want: want{
-				r: reconcile.Result{RequeueAfter: shortWait},
-			},
-		},
+		// IBM Patch: Reduce cluster permission - don't delete CRD (we don't have
+		// permissions for that), just remove finalizer
 		"SuccessfulCleanup": {
-			reason: "We should requeue after a tiny wait to remove our finalizer once we've cleaned up our defined resources and CRD.",
+			reason: "We shouldn't requeue once we've cleaned up our defined resources.",
 			args: args{
 				mgr: &fake.Manager{},
 				opts: []ReconcilerOption{
@@ -461,9 +425,10 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			want: want{
-				r: reconcile.Result{RequeueAfter: tinyWait},
+				r: reconcile.Result{Requeue: false},
 			},
 		},
+		// IBM Patch end
 		"AddFinalizerError": {
 			reason: "We should requeue after a short wait if we encounter an error while adding a finalizer.",
 			args: args{
