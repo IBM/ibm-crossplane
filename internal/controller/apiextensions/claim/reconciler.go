@@ -71,9 +71,6 @@ const (
 const (
 	errGetClaim          = "cannot get composite resource claim"
 	errUpdateClaimStatus = "cannot update composite resource claim status"
-	// IBM Patch
-	errApplyClaim     = "cannot apply composite resource claim"
-	errApplyComposite = "cannot apply composite resource"
 )
 
 // Event reasons.
@@ -83,9 +80,6 @@ const (
 	reasonCompositeConfigure event.Reason = "ConfigureCompositeResource"
 	reasonClaimConfigure     event.Reason = "ConfigureClaim"
 	reasonPropagate          event.Reason = "PropagateConnectionSecret"
-	// IBM Patch
-	reasonClaimApply     event.Reason = "ApplyClaim"
-	reasonCompositeApply event.Reason = "ApplyComposite"
 )
 
 // ControllerName returns the recommended name for controllers that use this
@@ -157,8 +151,6 @@ type Reconciler struct {
 
 	log    logging.Logger
 	record event.Recorder
-	// IBM Patch: Add ownerReferences to Claims and Composites
-	ownerRef metav1.OwnerReference
 }
 
 type crComposite struct {
@@ -260,7 +252,7 @@ func WithRecorder(er event.Recorder) ReconcilerOption {
 // The returned Reconciler will apply only the ObjectMetaConfigurator by
 // default; most callers should supply one or more CompositeConfigurators to
 // configure their composite resources.
-func NewReconciler(m manager.Manager, cfs client.Client, or metav1.OwnerReference, of resource.CompositeClaimKind, with resource.CompositeKind, o ...ReconcilerOption) *Reconciler {
+func NewReconciler(m manager.Manager, cfs client.Client, of resource.CompositeClaimKind, with resource.CompositeKind, o ...ReconcilerOption) *Reconciler {
 	c := unstructured.NewClient(m.GetClient())
 	r := &Reconciler{
 		client: resource.ClientApplicator{
@@ -278,8 +270,6 @@ func NewReconciler(m manager.Manager, cfs client.Client, or metav1.OwnerReferenc
 		// applied client has been changed to `cfs` as it is a client without cluster scope informers
 		// used for secrets manipulations
 		composite: defaultCRComposite(c, cfs),
-		// IBM Patch: Add ownerReferences to Claims and Composites
-		ownerRef: or,
 		// IBM Patch: end
 		log:    logging.NewNopLogger(),
 		record: event.NewNopRecorder(),
@@ -377,15 +367,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{Requeue: false}, nil
 	}
 
-	// IBM Patch: Add ownerReference to claim CRs
-	meta.AddOwnerReference(cm, r.ownerRef)
-	if err := r.client.Apply(ctx, cm); err != nil {
-		log.Debug(errApplyClaim, "error", err)
-		record.Event(cm, event.Warning(reasonClaimApply, err))
-		return reconcile.Result{RequeueAfter: aShortWait}, nil
-	}
-	// IBM Patch end
-
 	if err := r.claim.AddFinalizer(ctx, cm); err != nil {
 		// If we didn't hit this error last time we'll be requeued
 		// implicitly due to the status update. Otherwise we want to retry
@@ -426,9 +407,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		cm.SetConditions(xpv1.Unavailable().WithMessage(err.Error()))
 		return reconcile.Result{RequeueAfter: aShortWait}, errors.Wrap(r.client.Status().Update(ctx, cm), errUpdateClaimStatus)
 	}
-
-	// IBM Patch: Add ownerReferences to Composite
-	meta.AddOwnerReference(cp, r.ownerRef)
 
 	if err := r.client.Apply(ctx, cp); err != nil {
 		// If we didn't hit this error last time we'll be requeued
