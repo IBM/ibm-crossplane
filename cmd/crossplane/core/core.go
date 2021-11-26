@@ -32,6 +32,12 @@ limitations under the License.
 package core
 
 import (
+	"context"
+	"fmt"
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
+	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -113,5 +119,79 @@ func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
 		return errors.Wrap(err, "Cannot add packages controllers to manager")
 	}
 
+	// IBM Patch: Migration to use Provider.
+	cli := mgr.GetClient()
+	ctx := context.Background()
+	logger := mgr.GetLogger()
+
+	// List of <service>Composite resources
+	cl := &kunstructured.UnstructuredList{}
+	ckinds := []string{"PostgresComposite", "KafkaComposite"}
+
+	for _, ck := range ckinds{
+		l := &kunstructured.UnstructuredList{}
+		l.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "shim.bedrock.ibm.com/v1alpha1",  Kind: ck})
+		if err := cli.List(ctx, l); err != nil {
+			logger.Info("Error during migration, list Composites:" + err.Error())
+		}
+		cl.Items = append(cl.Items, l.Items...)
+	}
+	// range over all composite resources and check if any of them needs to be updated
+	for _, cpt := range cl.Items {
+		var cref string
+		cref, _ = fieldpath.Pave(cpt.Object).GetString("spec.compositionRef.name")
+		// List of compositions that were updated from Crossplane to Provider logic.
+		ctu := map[string]bool {
+			"kafka-iaf.odlm.bedrock.ibm.com": true,
+			"kafka-iaf-skip-user.odlm.bedrock.ibm.com": true,
+			"postgres.odlm.bedrock.ibm.com2": true,
+		}
+
+		if ctu[cref] {
+			csite := &kunstructured.Unstructured{}
+			csite.SetGroupVersionKind(schema.GroupVersionKind{Group: "shim.bedrock.ibm.com", Version: "v1alpha1",  Kind: cpt.GetKind()})
+			if err := cli.Get(ctx, types.NamespacedName{Namespace: "", Name: cpt.GetName()}, csite); err != nil {
+				logger.Info("Error during migration, get Composite:" + err.Error())
+				//panic()??
+				continue
+			}
+
+			//fieldpath.Pave(qqq.Object).SetValue("spec.compositionRef", "")
+			//fieldpath.Pave(qqq.Object).SetValue("spec.resourceRefs", "")
+
+			spec := csite.Object["spec"].(map[string]interface{})
+
+			if spec["resourceRefs"] == nil{
+				continue
+			}
+			rrs := spec["resourceRefs"].([]interface{})
+			fmt.Println(rrs)
+
+			migrate := true
+			for _, rr := range rrs{
+				if rr.(map[string]interface{})["kind"] == "Object"{
+					migrate = false
+					break
+				}
+			}
+
+			if migrate {
+				delete(spec, "compositionRef")
+				delete(spec, "resourceRefs")
+				//csite.Object["spec"] = spec
+
+				err = cli.Update(ctx, csite)
+			}
+
+
+		}
+
+		//comp := &kunstructured.Unstructured{}
+		//comp.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "apiextensions.ibm.crossplane.io/v1",  Kind: "Composition"})
+		//
+		//if err := cli.Get(ctx, types.NamespacedName{Name: cref}, comp); err != nil {
+		//	fmt.Println("error ++++++++++++++++")
+		//}
+	}
 	return errors.Wrap(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
 }
