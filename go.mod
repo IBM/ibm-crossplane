@@ -17,7 +17,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.4.1
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
-	golang.org/x/tools v0.1.0
+	golang.org/x/tools v0.1.7
 	k8s.io/api v0.21.2
 	k8s.io/apiextensions-apiserver v0.21.2
 	k8s.io/apimachinery v0.21.2

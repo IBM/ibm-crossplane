@@ -34,11 +34,13 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
-	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"time"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"time"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/alecthomas/kong"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -53,6 +55,8 @@ import (
 	"github.com/crossplane/crossplane/internal/controller/pkg"
 	"github.com/crossplane/crossplane/internal/feature"
 	"github.com/crossplane/crossplane/internal/xpkg"
+
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 )
 
 // Command runs the core crossplane controllers
@@ -120,78 +124,72 @@ func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
 	}
 
 	// IBM Patch: Migration to use Provider.
+	// This migration is needed in order to support the user having previous working Kafka or Postgres.
+	// New logic could fail for them and in the worst scenario it could recreate the services
+	if err := migrateToProviderLogic(mgr); err != nil {
+		return errors.Wrap(err, "Migration failed")
+	}
+
+	return errors.Wrap(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
+}
+
+// IBM Patch: Migration to use Provider.
+// migrateToProviderLogic: detects if Composites need to be updated
+// so that Crossplane will adapt them to Provider logic.
+// This function deletes "compositionRef" and "resourceRefs" if needed.
+func migrateToProviderLogic(mgr manager.Manager) error {
 	cli := mgr.GetClient()
 	ctx := context.Background()
-	logger := mgr.GetLogger()
-
-	// List of <service>Composite resources
-	cl := &kunstructured.UnstructuredList{}
+	// List of compositions that were updated from Crossplane to Provider logic.
+	ctu := map[string]bool{
+		"kafka-iaf.odlm.bedrock.ibm.com":           true,
+		"kafka-iaf-skip-user.odlm.bedrock.ibm.com": true,
+		"postgres.odlm.bedrock.ibm.com":           true,
+	}
+	// List of Composite resources
+	cl := &unstructured.UnstructuredList{}
 	ckinds := []string{"PostgresComposite", "KafkaComposite"}
-
-	for _, ck := range ckinds{
-		l := &kunstructured.UnstructuredList{}
-		l.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "shim.bedrock.ibm.com/v1alpha1",  Kind: ck})
+	for _, ck := range ckinds {
+		l := &unstructured.UnstructuredList{}
+		l.SetGroupVersionKind(schema.GroupVersionKind{Version: "shim.bedrock.ibm.com/v1alpha1", Kind: ck})
 		if err := cli.List(ctx, l); err != nil {
-			logger.Info("Error during migration, list Composites:" + err.Error())
+			return errors.Wrap(err, "Cannot list Composites for migration")
 		}
 		cl.Items = append(cl.Items, l.Items...)
 	}
-	// range over all composite resources and check if any of them needs to be updated
+	// Range over all composite resources and check if any of them needs to be updated
+OUTER:
 	for _, cpt := range cl.Items {
 		var cref string
 		cref, _ = fieldpath.Pave(cpt.Object).GetString("spec.compositionRef.name")
-		// List of compositions that were updated from Crossplane to Provider logic.
-		ctu := map[string]bool {
-			"kafka-iaf.odlm.bedrock.ibm.com": true,
-			"kafka-iaf-skip-user.odlm.bedrock.ibm.com": true,
-			"postgres.odlm.bedrock.ibm.com2": true,
-		}
-
+		// Handle only if specified Composition is indicated
 		if ctu[cref] {
-			csite := &kunstructured.Unstructured{}
-			csite.SetGroupVersionKind(schema.GroupVersionKind{Group: "shim.bedrock.ibm.com", Version: "v1alpha1",  Kind: cpt.GetKind()})
+			csite := &unstructured.Unstructured{}
+			csite.SetGroupVersionKind(schema.GroupVersionKind{Version: "shim.bedrock.ibm.com/v1alpha1", Kind: cpt.GetKind()})
 			if err := cli.Get(ctx, types.NamespacedName{Namespace: "", Name: cpt.GetName()}, csite); err != nil {
-				logger.Info("Error during migration, get Composite:" + err.Error())
-				//panic()??
-				continue
+				return errors.Wrap(err, "Cannot get Composite for migration")
 			}
-
-			//fieldpath.Pave(qqq.Object).SetValue("spec.compositionRef", "")
-			//fieldpath.Pave(qqq.Object).SetValue("spec.resourceRefs", "")
-
 			spec := csite.Object["spec"].(map[string]interface{})
-
-			if spec["resourceRefs"] == nil{
+			// Skip if there are no resourceRefs
+			if spec["resourceRefs"] == nil {
 				continue
 			}
 			rrs := spec["resourceRefs"].([]interface{})
-			fmt.Println(rrs)
-
-			migrate := true
-			for _, rr := range rrs{
-				if rr.(map[string]interface{})["kind"] == "Object"{
-					migrate = false
-					break
+			for _, rr := range rrs {
+				if rr.(map[string]interface{})["kind"] == "Object" {
+					// Do not apply migration if there is at least one `Object` kind
+					// Then we assume that Provider logic has already been applied here (future cases)
+					continue OUTER
 				}
 			}
-
-			if migrate {
-				delete(spec, "compositionRef")
-				delete(spec, "resourceRefs")
-				//csite.Object["spec"] = spec
-
-				err = cli.Update(ctx, csite)
+			// Clear following sections. Crossplane will again match Composition
+			delete(spec, "compositionRef")
+			delete(spec, "resourceRefs")
+			if err := cli.Update(ctx, csite); err != nil {
+				return errors.Wrap(err, "Cannot update Composite for migration")
 			}
-
-
+			fmt.Println("Successfully updated existing Composite for migration: " + csite.GetName())
 		}
-
-		//comp := &kunstructured.Unstructured{}
-		//comp.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Version: "apiextensions.ibm.crossplane.io/v1",  Kind: "Composition"})
-		//
-		//if err := cli.Get(ctx, types.NamespacedName{Name: cref}, comp); err != nil {
-		//	fmt.Println("error ++++++++++++++++")
-		//}
 	}
-	return errors.Wrap(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
+	return nil
 }
