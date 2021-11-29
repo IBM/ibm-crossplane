@@ -39,7 +39,6 @@ import (
 	"github.com/pkg/errors"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kmeta "k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kunstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -80,7 +79,6 @@ const (
 	errStartController = "cannot start composite resource claim controller"
 	errAddFinalizer    = "cannot add composite resource claim finalizer"
 	errRemoveFinalizer = "cannot remove composite resource claim finalizer"
-	errDeleteCRD       = "cannot delete composite resource claim CustomResourceDefinition"
 	errListCRs         = "cannot list defined composite resource claims"
 	errDeleteCR        = "cannot delete defined composite resource claim"
 )
@@ -304,7 +302,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// creating it, or that we lost control of it around the same time we
 		// were deleted. In the (presumably exceedingly rare) latter case we'll
 		// orphan the CRD.
-		if !meta.WasCreated(crd) || !metav1.IsControlledBy(crd, d) {
+		// IBM Patch: Reduce cluster permission - we can't have control over CRD
+		if !meta.WasCreated(crd) {
 			// It's likely that we've already stopped this controller on a
 			// previous reconcile, but we try again just in case. This is a
 			// no-op if the controller was already stopped.
@@ -360,18 +359,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.Debug("Stopped composite resource claim controller")
 		r.record.Event(d, event.Normal(reasonRedactXRC, "Stopped composite resource claim controller"))
 
-		if err := r.client.Delete(ctx, crd); resource.IgnoreNotFound(err) != nil {
-			log.Debug(errDeleteCRD, "error", err)
-			r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errDeleteCRD)))
+		// IBM Patch: Reduce cluster permission - don't delete CRD (we don't have
+		// permissions for that), just remove finalizer
+		if err := r.claim.RemoveFinalizer(ctx, d); err != nil {
+			log.Debug(errRemoveFinalizer, "error", err)
+			r.record.Event(d, event.Warning(reasonRedactXRC, errors.Wrap(err, errRemoveFinalizer)))
 			return reconcile.Result{RequeueAfter: shortWait}, nil
 		}
-		log.Debug("Deleted composite resource claim CustomResourceDefinition")
-		r.record.Event(d, event.Normal(reasonRedactXRC, "Deleted composite resource claim CustomResourceDefinition"))
 
-		// We should be requeued implicitly because we're watching the
-		// CustomResourceDefinition that we just deleted, but we requeue after
-		// a tiny wait just in case the CRD isn't gone after the first requeue.
-		return reconcile.Result{RequeueAfter: tinyWait}, nil
+		// We're all done deleting and have removed our finalizer. There's
+		// no need to requeue because there's nothing left to do.
+		return reconcile.Result{Requeue: false}, nil
+		// IBM Patch end
 	}
 
 	if err := r.claim.AddFinalizer(ctx, d); err != nil {
