@@ -144,7 +144,7 @@ func migrateToProviderLogic(mgr manager.Manager) error {
 	ctu := map[string]bool{
 		"kafka-iaf.odlm.bedrock.ibm.com":           true,
 		"kafka-iaf-skip-user.odlm.bedrock.ibm.com": true,
-		"postgres.odlm.bedrock.ibm.com":           true,
+		"postgres.odlm.bedrock.ibm.com":            true,
 	}
 	// List of Composite resources
 	cl := &unstructured.UnstructuredList{}
