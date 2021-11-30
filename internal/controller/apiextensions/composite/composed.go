@@ -351,7 +351,12 @@ func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, c
 	// in the template or we're trying to use the wrong template (e.g. because
 	// the order of an array of anonymous templates changed).
 	if kind != "" && cd.GetObjectKind().GroupVersionKind().Kind != kind {
-		return errors.New(errKindChanged)
+		// IBM Patch: Migration to use Provider.
+		// panic() to stop the container because this should restart the pod
+		// in case of incorrect kind in Composite. Container should run again migration
+		// and fix Composite.
+		panic(errKindChanged)
+		// IBM Patch end: Migration to use Provider.
 	}
 
 	if cp.GetLabels()[xcrd.LabelKeyNamePrefixForComposed] == "" {
