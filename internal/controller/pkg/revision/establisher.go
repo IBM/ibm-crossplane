@@ -85,6 +85,12 @@ func (e *APIEstablisher) Establish(ctx context.Context, objs []runtime.Object, p
 		if !ok {
 			return nil, errors.New(errAssertClientObj)
 		}
+		// IBM Patch: Migration to use Provider / Reduce cluster permission
+		// Skip manipulating CRDs
+		if res.GetObjectKind().GroupVersionKind().Kind == "CustomResourceDefinition" {
+			continue
+		}
+		// IBM Patch end: Migration to use Provider / Reduce cluster permission
 		err := e.client.Get(ctx, types.NamespacedName{Name: d.GetName(), Namespace: d.GetNamespace()}, current)
 		if resource.IgnoreNotFound(err) != nil {
 			return nil, err
