@@ -28,9 +28,12 @@ import (
 )
 
 var (
-	replicas                 = int32(1)
-	runAsUser                = int64(1000590000)
-	runAsGroup               = int64(1000590000)
+	replicas = int32(1)
+	// IBM Patch: Migration to use Provider.
+	// hardcoded runAsUser fails on Openshift clusters
+	// runAsUser                = int64(2000)
+	// runAsGroup               = int64(2000)
+	// IBM Patch end: Migration to use Provider.
 	allowPrivilegeEscalation = false
 	privileged               = false
 	runAsNonRoot             = true
@@ -67,8 +70,6 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &runAsNonRoot,
-						RunAsUser:    &runAsUser,
-						RunAsGroup:   &runAsGroup,
 					},
 					ServiceAccountName: s.GetName(),
 					ImagePullSecrets:   revision.GetPackagePullSecrets(),
@@ -81,8 +82,6 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 							},
 							ImagePullPolicy: pullPolicy,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:                &runAsUser,
-								RunAsGroup:               &runAsGroup,
 								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 								Privileged:               &privileged,
 								RunAsNonRoot:             &runAsNonRoot,
