@@ -232,12 +232,23 @@ func SetupProviderRevision(mgr ctrl.Manager, l logging.Logger, cache xpkg.Cache,
 		return errors.New("cannot build object scheme for package parser")
 	}
 
+	// IBM Patch: Remove cluster permission for SA and Deployments
+	// - create new client, that avoids using cluster-scope informers.
+	config := mgr.GetConfig()
+	cfsa, err := client.New(config, client.Options{})
+	if err != nil {
+		l.Debug("Cannot create client for SA and Deployment", "error", err)
+	}
+	// IBM Patch end: Remove cluster permission for SA and Deployments
+
 	r := NewReconciler(mgr,
 		WithCache(cache),
 		WithDependencyManager(NewPackageDependencyManager(mgr.GetClient(), dag.NewMapDag, v1beta1.ProviderPackageType)),
 		WithHooks(NewProviderHooks(resource.ClientApplicator{
-			Client:     mgr.GetClient(),
-			Applicator: resource.NewAPIPatchingApplicator(mgr.GetClient()),
+			// IBM Patch: Remove cluster permission for SA and Deployments
+			Client:     cfsa,
+			Applicator: resource.NewAPIPatchingApplicator(cfsa),
+			// IBM Patch end: Remove cluster permission for SA and Deployments
 		}, namespace)),
 		WithNewPackageRevisionFn(nr),
 		WithParser(parser.New(metaScheme, objScheme)),

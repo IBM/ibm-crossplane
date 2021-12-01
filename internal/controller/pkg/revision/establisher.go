@@ -87,6 +87,8 @@ func (e *APIEstablisher) Establish(ctx context.Context, objs []runtime.Object, p
 		}
 		// IBM Patch: Migration to use Provider / Reduce cluster permission
 		// Skip manipulating CRDs
+		// It is caused by CRDs in Provider package.
+		// TODO consider if this can be deleted when we move CRDs to OLM
 		if res.GetObjectKind().GroupVersionKind().Kind == "CustomResourceDefinition" {
 			continue
 		}
