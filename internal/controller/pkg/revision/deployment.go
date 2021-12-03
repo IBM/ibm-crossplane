@@ -42,7 +42,11 @@ var (
 func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRevision, cc *v1alpha1.ControllerConfig, namespace string) (*corev1.ServiceAccount, *appsv1.Deployment) { // nolint:interfacer,gocyclo
 	s := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            revision.GetName(),
+			// IBM Patch: rbac for Provider
+			// do not use revision name because its name is generated dynamically,
+			// instead use known, constant provider name
+			Name:            provider.GetName(),
+			// IBM Patch end: rbac for Provider
 			Namespace:       namespace,
 			OwnerReferences: []metav1.OwnerReference{meta.AsController(meta.TypedReferenceTo(revision, v1.ProviderRevisionGroupVersionKind))},
 		},
@@ -80,6 +84,16 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 							Args: []string{
 								"--debug",
 							},
+							// IBM Patch: reduce cluster permission
+							// this env variable is needed in provider
+							// to read NamespaceScope resource and restrict cache
+							Env: []corev1.EnvVar{
+								{
+									Name: "WATCH_NAMESPACE",
+									Value: namespace,
+								},
+							},
+							// IBM Patch end: reduce cluster permission
 							ImagePullPolicy: pullPolicy,
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
