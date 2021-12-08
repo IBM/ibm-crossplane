@@ -95,13 +95,18 @@ func (h *ProviderHooks) Pre(ctx context.Context, pkg runtime.Object, pr v1.Packa
 	if err != nil {
 		return errors.Wrap(err, errControllerConfig)
 	}
-	s, d := buildProviderDeployment(pkgProvider, pr, cc, h.namespace)
+	// IBM Patch: rbac for Provider
+	_, d := buildProviderDeployment(pkgProvider, pr, cc, h.namespace)
 	if err := h.client.Delete(ctx, d); resource.IgnoreNotFound(err) != nil {
 		return errors.Wrap(err, errDeleteProviderDeployment)
 	}
-	if err := h.client.Delete(ctx, s); resource.IgnoreNotFound(err) != nil {
-		return errors.Wrap(err, errDeleteProviderSA)
-	}
+	// Do not delete SA because in case of multiple providerrevisions
+	// its name is constant and inactive providerrevision causes deletion
+	// of correct SA.
+	// if err := h.client.Delete(ctx, s); resource.IgnoreNotFound(err) != nil {
+	//	return errors.Wrap(err, errDeleteProviderSA)
+	// }
+	// IBM Patch end: rbac for Provider
 	return nil
 }
 

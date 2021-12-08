@@ -337,7 +337,7 @@ func NewAPIDryRunRenderer(c client.Client) *APIDryRunRenderer {
 // Render the supplied composed resource using the supplied composite resource
 // and template. The rendered resource may be submitted to an API server via a
 // dry run create in order to name and validate it.
-func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, cd resource.Composed, t v1.ComposedTemplate) error {
+func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, cd resource.Composed, t v1.ComposedTemplate) error { //nolint: gocyclo
 	kind := cd.GetObjectKind().GroupVersionKind().Kind
 	name := cd.GetName()
 	namespace := cd.GetNamespace()
@@ -354,9 +354,12 @@ func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, c
 		// IBM Patch: Migration to use Provider.
 		// panic() to stop the container because this should restart the pod
 		// in case of incorrect kind in Composite. Container should run again migration
-		// and fix Composite.
-		panic(errKindChanged)
+		// and fix Composite. Restart only if new kind from template is "Object".
+		if cd.GetObjectKind().GroupVersionKind().Kind == "Object" {
+			panic(errKindChanged)
+		}
 		// IBM Patch end: Migration to use Provider.
+		return errors.New(errKindChanged)
 	}
 
 	if cp.GetLabels()[xcrd.LabelKeyNamePrefixForComposed] == "" {

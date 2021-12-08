@@ -45,7 +45,7 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 			// IBM Patch: rbac for Provider
 			// do not use revision name because its name is generated dynamically,
 			// instead use known, constant provider name
-			Name:            provider.GetName(),
+			Name: provider.GetName(),
 			// IBM Patch end: rbac for Provider
 			Namespace:       namespace,
 			OwnerReferences: []metav1.OwnerReference{meta.AsController(meta.TypedReferenceTo(revision, v1.ProviderRevisionGroupVersionKind))},
@@ -89,7 +89,7 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 							// to read NamespaceScope resource and restrict cache
 							Env: []corev1.EnvVar{
 								{
-									Name: "WATCH_NAMESPACE",
+									Name:  "WATCH_NAMESPACE",
 									Value: namespace,
 								},
 							},
