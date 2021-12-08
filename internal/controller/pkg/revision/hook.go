@@ -39,7 +39,6 @@ const (
 	errNotProviderRevision           = "not a provider revision"
 	errControllerConfig              = "cannot get referenced controller config"
 	errDeleteProviderDeployment      = "cannot delete provider package deployment"
-	errDeleteProviderSA              = "cannot delete provider package service account"
 	errApplyProviderDeployment       = "cannot apply provider package deployment"
 	errApplyProviderSA               = "cannot apply provider package service account"
 	errUnavailableProviderDeployment = "provider package deployment is unavailable"
