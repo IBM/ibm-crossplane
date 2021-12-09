@@ -134,6 +134,8 @@ for ((i = 1; i <= 5; i++)); do
         else
             echo_step_completed
         fi
+        logs=$("${KUBECTL}" logs ${name} -n "${CROSSPLANE_NAMESPACE}")
+        echo "$logs"
 
         echo_info "check if has restarts"
         if (($(echo "$pod_stat" | awk '{print $4}') > 0)); then
