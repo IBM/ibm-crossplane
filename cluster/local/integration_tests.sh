@@ -126,7 +126,7 @@ for ((i = 1; i <= 5; i++)); do
         else
             echo_step_completed
         fi
-        
+
         echo_info "check if is running"
         if $(echo "$pod_stat" | awk '{print $3}' | grep -ivq 'Running'); then
             echo_error "is not running"
