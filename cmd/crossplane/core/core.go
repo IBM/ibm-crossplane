@@ -35,18 +35,18 @@ import (
 	"context"
 	"fmt"
 
-	"time"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
@@ -90,7 +90,7 @@ type startCommand struct {
 }
 
 // Run core Crossplane controllers.
-func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
+func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error { //nolint:gocyclo
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return errors.Wrap(err, "Cannot get config")
@@ -126,8 +126,25 @@ func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
 	// IBM Patch: Migration to use Provider.
 	// This migration is needed in order to support the user having previous working Kafka or Postgres.
 	// New logic could fail for them and in the worst scenario it could recreate the services
-	if err := migrateToProviderLogic(mgr); err != nil {
-		return errors.Wrap(err, "Migration failed")
+	cli := mgr.GetClient()
+	crdNames := []string{"postgrescomposites.shim.bedrock.ibm.com", "kafkacomposites.shim.bedrock.ibm.com"}
+	crds := &unstructured.UnstructuredList{}
+	crds.SetGroupVersionKind(schema.GroupVersionKind{Version: "apiextensions.k8s.io/v1", Kind: "CustomResourceDefinition"})
+	if err := cli.List(context.Background(), crds); err != nil {
+		return errors.Wrap(err, "Cannot list CRDs for migration")
+	}
+
+	// run migration only when required CRDs exist (would fail on integration tests)
+out:
+	for _, crd := range crds.Items {
+		for _, ck := range crdNames {
+			if crd.GetName() == ck {
+				if err := migrateToProviderLogic(cli); err != nil {
+					return errors.Wrap(err, "Migration failed")
+				}
+				break out
+			}
+		}
 	}
 
 	return errors.Wrap(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
@@ -137,8 +154,7 @@ func (c *startCommand) Run(s *runtime.Scheme, log logging.Logger) error {
 // migrateToProviderLogic: detects if Composites need to be updated
 // so that Crossplane will adapt them to Provider logic.
 // This function deletes "compositionRef" and "resourceRefs" if needed.
-func migrateToProviderLogic(mgr manager.Manager) error {
-	cli := mgr.GetClient()
+func migrateToProviderLogic(cli client.Client) error {
 	ctx := context.Background()
 	// List of compositions that were updated from Crossplane to Provider logic.
 	ctu := map[string]bool{
