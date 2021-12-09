@@ -116,8 +116,6 @@ for ((i = 1; i <= 5; i++)); do
     echo "$pods"
     while read -r pod_stat; do
         name=$(echo "$pod_stat" | awk '{print $1}')
-        echo_sub_step "inspecting pod '${name}'"
-        logs=$("${KUBECTL}" logs ${name} -n "${CROSSPLANE_NAMESPACE}")
         echo "$logs"
         echo_info "check if is ready"
         IFS='/' read -ra ready_status_parts <<<"$(echo "$pod_stat" | awk '{print $2}')"
@@ -127,8 +125,6 @@ for ((i = 1; i <= 5; i++)); do
         else
             echo_step_completed
         fi
-        logs=$("${KUBECTL}" logs ${name} -n "${CROSSPLANE_NAMESPACE}")
-        echo "$logs"
         echo_info "check if is running"
         if $(echo "$pod_stat" | awk '{print $3}' | grep -ivq 'Running'); then
             echo_error "is not running"
@@ -136,8 +132,6 @@ for ((i = 1; i <= 5; i++)); do
         else
             echo_step_completed
         fi
-        logs=$("${KUBECTL}" logs ${name} -n "${CROSSPLANE_NAMESPACE}")
-        echo "$logs"
 
         echo_info "check if has restarts"
         if (($(echo "$pod_stat" | awk '{print $4}') > 0)); then
@@ -147,8 +141,6 @@ for ((i = 1; i <= 5; i++)); do
             echo_step_completed
         fi
         echo
-        logs=$("${KUBECTL}" logs ${name} -n "${CROSSPLANE_NAMESPACE}")
-        echo "$logs"
     done <<<"$(echo "$pods" | awk 'FNR>1')"
     sleep 5
 done
