@@ -193,6 +193,7 @@ e2e-tests-compile:
 	@$(INFO) Checking that e2e tests compile
 	@$(GO) test -c -o $(WORK_DIR)/e2e/$(PLATFORM)/apiextensions.test ./test/e2e/apiextensions --tags=e2e
 	@$(GO) test -c -o $(WORK_DIR)/e2e/$(PLATFORM)/pkg.test ./test/e2e/pkg --tags=e2e
+	@echo "temptemptemp"
 	@$(OK) Verified e2e tests compile
 
 # Compile e2e tests for each platform.
