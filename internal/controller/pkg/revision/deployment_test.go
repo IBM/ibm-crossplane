@@ -67,7 +67,9 @@ func deployment(provider *pkgmetav1.Provider, revision string, watchNamespace st
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      provider.GetName(),
 					Namespace: namespace,
-					Labels:    map[string]string{"pkg.crossplane.io/revision": revision},
+					// IBM Patch: Add label for NSS operator
+					Labels: map[string]string{"pkg.crossplane.io/revision": revision, "intent": "projected"},
+					// IBM Patch end: Add label for NSS operator
 				},
 				Spec: corev1.PodSpec{
 					// IBM Patch: rbac for Provider
@@ -176,6 +178,9 @@ func TestBuildProviderDeployment(t *testing.T) {
 				// IBM Patch end: reduce cluster permission
 				"pkg.crossplane.io/revision": revisionWithCC.GetName(),
 				"k":                          "v",
+				// IBM Patch: Add label for NSS operator
+				"intent": "projected",
+				// IBM Patch end: Add label for NSS operator
 			})),
 		},
 	}

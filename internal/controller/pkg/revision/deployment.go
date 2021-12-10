@@ -180,6 +180,9 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 	for k, v := range d.Spec.Selector.MatchLabels { // ensure the template matches the selector
 		templateLabels[k] = v
 	}
+	// IBM Patch: Add label for NSS operator
+	templateLabels["intent"] = "projected"
+	// IBM Patch end: Add label for NSS operator
 	d.Spec.Template.Labels = templateLabels
 
 	return s, d
