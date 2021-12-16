@@ -519,7 +519,17 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 				key = *d.Name
 			}
 			if key != "" {
-				conn[key] = data[*d.FromConnectionSecretKey]
+				// IBM Patch: add base64 decoding
+				var value = data[*d.FromConnectionSecretKey]
+				if d.DecodeBase64 != nil && *d.DecodeBase64 {
+					vb, err := b64.StdEncoding.DecodeString(string(value))
+					if err != nil {
+						return nil, errors.Wrap(err, fmt.Sprintf(errFmtDecodeBase64, string(value)))
+					}
+					value = vb
+				}
+				conn[key] = value
+				// IBM Patch end: add base64 decoding
 			}
 		case v1.ConnectionDetailTypeFromFieldPath:
 			switch {
