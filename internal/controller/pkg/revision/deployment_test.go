@@ -83,9 +83,6 @@ func deployment(provider *pkgmetav1.Provider, revision string, watchNamespace st
 							Env: []corev1.EnvVar{{Name: "WATCH_NAMESPACE", Value: watchNamespace}},
 							// IBM Patch end: reduce cluster permission
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Args: []string{
-								"--debug",
-							},
 						},
 					},
 				},

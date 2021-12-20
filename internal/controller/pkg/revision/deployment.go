@@ -81,9 +81,6 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 						{
 							Name:  provider.GetName(),
 							Image: provider.Spec.Controller.Image,
-							Args: []string{
-								"--debug",
-							},
 							// IBM Patch: reduce cluster permission
 							// this env variable is needed in provider
 							// to read NamespaceScope resource and restrict cache
