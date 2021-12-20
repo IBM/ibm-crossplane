@@ -28,9 +28,12 @@ import (
 )
 
 var (
-	replicas                 = int32(1)
-	runAsUser                = int64(2000)
-	runAsGroup               = int64(2000)
+	replicas = int32(1)
+	// IBM Patch: Migration to use Provider.
+	// hardcoded runAsUser fails on Openshift clusters
+	// runAsUser                = int64(2000)
+	// runAsGroup               = int64(2000)
+	// IBM Patch end: Migration to use Provider.
 	allowPrivilegeEscalation = false
 	privileged               = false
 	runAsNonRoot             = true
@@ -39,7 +42,11 @@ var (
 func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRevision, cc *v1alpha1.ControllerConfig, namespace string) (*corev1.ServiceAccount, *appsv1.Deployment) { // nolint:interfacer,gocyclo
 	s := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            revision.GetName(),
+			// IBM Patch: rbac for Provider
+			// do not use revision name because its name is generated dynamically,
+			// instead use known, constant provider name
+			Name: provider.GetName(),
+			// IBM Patch end: rbac for Provider
 			Namespace:       namespace,
 			OwnerReferences: []metav1.OwnerReference{meta.AsController(meta.TypedReferenceTo(revision, v1.ProviderRevisionGroupVersionKind))},
 		},
@@ -67,19 +74,25 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &runAsNonRoot,
-						RunAsUser:    &runAsUser,
-						RunAsGroup:   &runAsGroup,
 					},
 					ServiceAccountName: s.GetName(),
 					ImagePullSecrets:   revision.GetPackagePullSecrets(),
 					Containers: []corev1.Container{
 						{
-							Name:            provider.GetName(),
-							Image:           provider.Spec.Controller.Image,
+							Name:  provider.GetName(),
+							Image: provider.Spec.Controller.Image,
+							// IBM Patch: reduce cluster permission
+							// this env variable is needed in provider
+							// to read NamespaceScope resource and restrict cache
+							Env: []corev1.EnvVar{
+								{
+									Name:  "WATCH_NAMESPACE",
+									Value: namespace,
+								},
+							},
+							// IBM Patch end: reduce cluster permission
 							ImagePullPolicy: pullPolicy,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:                &runAsUser,
-								RunAsGroup:               &runAsGroup,
 								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 								Privileged:               &privileged,
 								RunAsNonRoot:             &runAsNonRoot,
@@ -164,6 +177,9 @@ func buildProviderDeployment(provider *pkgmetav1.Provider, revision v1.PackageRe
 	for k, v := range d.Spec.Selector.MatchLabels { // ensure the template matches the selector
 		templateLabels[k] = v
 	}
+	// IBM Patch: Add label for NSS operator
+	templateLabels["intent"] = "projected"
+	// IBM Patch end: Add label for NSS operator
 	d.Spec.Template.Labels = templateLabels
 
 	return s, d

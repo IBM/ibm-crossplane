@@ -186,52 +186,6 @@ func TestHookPre(t *testing.T) {
 				err: errors.Wrap(errBoom, errDeleteProviderDeployment),
 			},
 		},
-		"ErrProviderDeleteSA": {
-			reason: "Should return error if we fail to delete service account for inactive provider revision.",
-			args: args{
-				hook: &ProviderHooks{
-					client: resource.ClientApplicator{
-						Client: &test.MockClient{
-							MockDelete: test.NewMockDeleteFn(nil, func(o client.Object) error {
-								switch o.(type) {
-								case *appsv1.Deployment:
-									return nil
-								case *corev1.ServiceAccount:
-									return errBoom
-								}
-								return nil
-							}),
-						},
-					},
-				},
-				pkg: &pkgmetav1.Provider{
-					Spec: pkgmetav1.ProviderSpec{
-						MetaSpec: pkgmetav1.MetaSpec{
-							Crossplane: &pkgmetav1.CrossplaneConstraints{
-								Version: crossplane,
-							},
-							DependsOn: []pkgmetav1.Dependency{{
-								Provider: &providerDep,
-								Version:  versionDep,
-							}},
-						},
-					},
-				},
-				rev: &v1.ProviderRevision{
-					Spec: v1.PackageRevisionSpec{
-						DesiredState: v1.PackageRevisionInactive,
-					},
-				},
-			},
-			want: want{
-				rev: &v1.ProviderRevision{
-					Spec: v1.PackageRevisionSpec{
-						DesiredState: v1.PackageRevisionInactive,
-					},
-				},
-				err: errors.Wrap(errBoom, errDeleteProviderSA),
-			},
-		},
 		"SuccessfulProviderDelete": {
 			reason: "Should update status and not return error when deployment and service account deleted successfully.",
 			args: args{

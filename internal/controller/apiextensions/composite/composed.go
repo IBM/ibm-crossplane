@@ -337,7 +337,7 @@ func NewAPIDryRunRenderer(c client.Client) *APIDryRunRenderer {
 // Render the supplied composed resource using the supplied composite resource
 // and template. The rendered resource may be submitted to an API server via a
 // dry run create in order to name and validate it.
-func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, cd resource.Composed, t v1.ComposedTemplate) error {
+func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, cd resource.Composed, t v1.ComposedTemplate) error { //nolint: gocyclo
 	kind := cd.GetObjectKind().GroupVersionKind().Kind
 	name := cd.GetName()
 	namespace := cd.GetNamespace()
@@ -351,6 +351,14 @@ func (r *APIDryRunRenderer) Render(ctx context.Context, cp resource.Composite, c
 	// in the template or we're trying to use the wrong template (e.g. because
 	// the order of an array of anonymous templates changed).
 	if kind != "" && cd.GetObjectKind().GroupVersionKind().Kind != kind {
+		// IBM Patch: Migration to use Provider.
+		// panic() to stop the container because this should restart the pod
+		// in case of incorrect kind in Composite. Container should run again migration
+		// and fix Composite. Restart only if new kind from template is "Object".
+		if cd.GetObjectKind().GroupVersionKind().Kind == "Object" {
+			panic(errKindChanged)
+		}
+		// IBM Patch end: Migration to use Provider.
 		return errors.New(errKindChanged)
 	}
 
@@ -429,21 +437,10 @@ func NewAPIConnectionDetailsFetcher(c client.Client) *APIConnectionDetailsFetche
 	return &APIConnectionDetailsFetcher{client: c}
 }
 
-// GetFromLabelWriteConnectionSecretToReference of this Composite resource.
-// IBM Patch: Read WriteConnectionSecretToReference from Label, because we can not store it e.g. in KafkaUser CR
-func GetFromLabelWriteConnectionSecretToReference(cd resource.Composed) *xpv1.SecretReference {
-	out := &xpv1.SecretReference{}
-
-	if out.Name = cd.GetLabels()["writeConnectionSecretToRef"]; out.Name == "" {
-		out = cd.GetWriteConnectionSecretToReference()
-	}
-	return out
-}
-
 // FetchConnectionDetails of the supplied composed resource, if any.
 func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Context, cd resource.Composed, t v1.ComposedTemplate) (managed.ConnectionDetails, error) { // nolint:gocyclo
 	data := map[string][]byte{}
-	if sref := GetFromLabelWriteConnectionSecretToReference(cd); sref != nil {
+	if sref := cd.GetWriteConnectionSecretToReference(); sref != nil {
 		// It's possible that the composed resource does want to write a
 		// connection secret but has not yet. We presume this isn't an issue and
 		// that we'll propagate any connection details during a future
@@ -522,7 +519,17 @@ func (cdf *APIConnectionDetailsFetcher) FetchConnectionDetails(ctx context.Conte
 				key = *d.Name
 			}
 			if key != "" {
-				conn[key] = data[*d.FromConnectionSecretKey]
+				// IBM Patch: add base64 decoding
+				var value = data[*d.FromConnectionSecretKey]
+				if d.DecodeBase64 != nil && *d.DecodeBase64 {
+					vb, err := b64.StdEncoding.DecodeString(string(value))
+					if err != nil {
+						return nil, errors.Wrap(err, fmt.Sprintf(errFmtDecodeBase64, string(value)))
+					}
+					value = vb
+				}
+				conn[key] = value
+				// IBM Patch end: add base64 decoding
 			}
 		case v1.ConnectionDetailTypeFromFieldPath:
 			switch {

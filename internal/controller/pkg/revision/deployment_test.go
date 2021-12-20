@@ -44,7 +44,11 @@ const (
 	namespace = "ns"
 )
 
-func deployment(provider *pkgmetav1.Provider, revision string, modifiers ...deploymentModifier) *appsv1.Deployment {
+// IBM Patch: reduce cluster permission
+// added watchNamespace to the function because Crossplane propagates its
+// WATCH_NAMESPACE value to Provider's deployment
+func deployment(provider *pkgmetav1.Provider, revision string, watchNamespace string, modifiers ...deploymentModifier) *appsv1.Deployment {
+	// IBM Patch end: reduce cluster permission
 	var (
 		replicas = int32(1)
 	)
@@ -63,14 +67,21 @@ func deployment(provider *pkgmetav1.Provider, revision string, modifiers ...depl
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      provider.GetName(),
 					Namespace: namespace,
-					Labels:    map[string]string{"pkg.crossplane.io/revision": revision},
+					// IBM Patch: Add label for NSS operator
+					Labels: map[string]string{"pkg.crossplane.io/revision": revision, "intent": "projected"},
+					// IBM Patch end: Add label for NSS operator
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: revision,
+					// IBM Patch: rbac for Provider
+					ServiceAccountName: provider.GetName(),
+					// IBM Patch end: rbac for Provider
 					Containers: []corev1.Container{
 						{
-							Name:            provider.GetName(),
-							Image:           provider.Spec.Controller.Image,
+							Name:  provider.GetName(),
+							Image: provider.Spec.Controller.Image,
+							// IBM Patch: reduce cluster permission
+							Env: []corev1.EnvVar{{Name: "WATCH_NAMESPACE", Value: watchNamespace}},
+							// IBM Patch end: reduce cluster permission
 							ImagePullPolicy: corev1.PullIfNotPresent,
 						},
 					},
@@ -149,7 +160,9 @@ func TestBuildProviderDeployment(t *testing.T) {
 				revision: revisionWithoutCC,
 				cc:       nil,
 			},
-			want: deployment(provider, revisionWithCC.GetName()),
+			// IBM Patch: reduce cluster permission
+			want: deployment(provider, revisionWithCC.GetName(), "ns"),
+			// IBM Patch end: reduce cluster permission
 		},
 		"CC": {
 			fields: fields{
@@ -157,9 +170,14 @@ func TestBuildProviderDeployment(t *testing.T) {
 				revision: revisionWithCC,
 				cc:       cc,
 			},
-			want: deployment(provider, revisionWithCC.GetName(), withPodTemplateLabels(map[string]string{
+			// IBM Patch: reduce cluster permission
+			want: deployment(provider, revisionWithCC.GetName(), "ns", withPodTemplateLabels(map[string]string{
+				// IBM Patch end: reduce cluster permission
 				"pkg.crossplane.io/revision": revisionWithCC.GetName(),
 				"k":                          "v",
+				// IBM Patch: Add label for NSS operator
+				"intent": "projected",
+				// IBM Patch end: Add label for NSS operator
 			})),
 		},
 	}
