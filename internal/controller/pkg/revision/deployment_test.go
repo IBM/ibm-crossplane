@@ -67,6 +67,13 @@ func deployment(provider *pkgmetav1.Provider, revision string, watchNamespace st
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      provider.GetName(),
 					Namespace: namespace,
+					// IBM Patch: add licensing annotations
+					Annotations: map[string]string{
+						"productName":   "IBM Cloud Platform Common Services",
+						"productID":     "068a62892a1e4db39641342e592daa25",
+						"productMetric": "FREE",
+					},
+					// IBM Patch end: add licensing annotation
 					// IBM Patch: Add label for NSS operator
 					Labels: map[string]string{"pkg.crossplane.io/revision": revision, "intent": "projected"},
 					// IBM Patch end: Add label for NSS operator
@@ -146,6 +153,13 @@ func TestBuildProviderDeployment(t *testing.T) {
 				Labels: map[string]string{
 					"k": "v",
 				},
+				// IBM Patch: add licensing annotations
+				Annotations: map[string]string{
+					"productName":   "IBM Cloud Platform Common Services",
+					"productID":     "068a62892a1e4db39641342e592daa25",
+					"productMetric": "FREE",
+				},
+				// IBM Patch end: add licensing annotations
 			},
 		},
 	}
