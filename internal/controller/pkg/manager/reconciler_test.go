@@ -769,7 +769,7 @@ func TestReconcile(t *testing.T) {
 								p := o.(*v1.Provider)
 								p.SetName("ibm-crossplane-provider-kubernetes")
 								p.SetSource("FromEnvVar")
-								p.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
+								p.SetGroupVersionKind(v1.ProviderGroupVersionKind)
 								p.SetRevisionHistoryLimit(&revHistory)
 								return nil
 							}),
