@@ -80,6 +80,9 @@ const (
 	errGCPackageRevision    = "cannot garbage collect old package revision"
 	// IBM Patch
 	errApplyPackage = "cannot apply package"
+	// IBM Patch: replace 'FromEnvVar' with image name from env variables
+	errEmptySource = "source from env variable is empty"
+	// IBM Patch end: replace 'FromEnvVar' with image name from env variables
 
 	errUpdateStatus                  = "cannot update package status"
 	errUpdateInactivePackageRevision = "cannot update inactive package revision"
@@ -97,6 +100,9 @@ const (
 	reasonInstall            event.Reason = "InstallPackageRevision"
 	// IBM Patch
 	reasonApply event.Reason = "ApplyPackage"
+	// IBM Patch: replace 'FromEnvVar' with image name from env variables
+	reasonSource event.Reason = "SetSource"
+	// IBM Patch end: replace 'FromEnvVar' with image name from env variables
 )
 
 // ReconcilerOption is used to configure the Reconciler.
@@ -248,9 +254,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGetPackage)
 	}
 
-	// IBM Patch: replace 'FromEnvVar' with image name from IBM_CROSSPLANE_BEDROCK_SHIM_CONFIG_IMAGE
+	// IBM Patch: replace 'FromEnvVar' with image name from env variables
 	if p.GetSource() == "FromEnvVar" {
-		src := os.Getenv("IBM_CROSSPLANE_BEDROCK_SHIM_CONFIG_IMAGE")
+		vars := map[string]string{
+			"ibm-crossplane-bedrock-shim-config": "IBM_CROSSPLANE_BEDROCK_SHIM_CONFIG_IMAGE",
+			"ibm-crossplane-provider-kubernetes": "IBM_CROSSPLANE_KUBERNETES_PROVIDER_IMAGE",
+			"ibm-crossplane-provider-ibm-cloud":  "IBM_CROSSPLANE_IBM_CLOUD_PROVIDER_IMAGE",
+		}
+		src := os.Getenv(vars[p.GetName()])
+		if src == "" {
+			log.Debug(errEmptySource)
+			r.record.Event(p, event.Warning(reasonSource, errors.New(errEmptySource)))
+			return reconcile.Result{RequeueAfter: shortWait}, errors.New(errEmptySource)
+		}
 		p.SetSource(src)
 		if err := r.client.Apply(ctx, p); err != nil {
 			log.Debug(errApplyPackage, "error", err)
@@ -259,7 +275,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
-	// IBM Patch end
+	// IBM Patch end: replace 'FromEnvVar' with image name from env variables
 
 	log = log.WithValues(
 		"uid", p.GetUID(),

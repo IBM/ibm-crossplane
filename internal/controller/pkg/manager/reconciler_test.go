@@ -719,7 +719,7 @@ func TestReconcile(t *testing.T) {
 				r: reconcile.Result{RequeueAfter: shortWait},
 			},
 		},
-		// IBM Patch: replace 'FromEnvVar' with image name from IBM_CROSSPLANE_BEDROCK_SHIM_CONFIG_IMAGE
+		// IBM Patch: replace 'FromEnvVar' with image name from env variables
 		"ErrApplyPackage": {
 			reason: "Failing to apply a package should cause requeue after short wait.",
 			args: args{
@@ -752,11 +752,12 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			want: want{
-				r: reconcile.Result{RequeueAfter: shortWait},
+				r:   reconcile.Result{RequeueAfter: shortWait},
+				err: errors.New(errEmptySource),
 			},
 		},
 		"SuccessfulReplacePackageImage": {
-			reason: "We should successfully replace 'fromEnvVar' with image name from IBM_CROSSPLANE_BEDROCK_SHIM_CONFIG_IMAGE.",
+			reason: "We should successfully replace 'fromEnvVar' with image name from env variables.",
 			args: args{
 				req: reconcile.Request{NamespacedName: types.NamespacedName{Name: "test"}},
 				rec: &Reconciler{
@@ -767,7 +768,7 @@ func TestReconcile(t *testing.T) {
 						Client: &test.MockClient{
 							MockGet: test.NewMockGetFn(nil, func(o client.Object) error {
 								p := o.(*v1.Configuration)
-								p.SetName("test")
+								p.SetName("ibm-crossplane-bedrock-shim-config")
 								p.SetSource("FromEnvVar")
 								p.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
 								p.SetRevisionHistoryLimit(&revHistory)
@@ -776,7 +777,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Applicator: resource.ApplyFn(func(_ context.Context, o client.Object, _ ...resource.ApplyOption) error {
 							want := &v1.Configuration{}
-							want.SetName("test")
+							want.SetName("ibm-crossplane-bedrock-shim-config")
 							want.SetSource("IBM_CROSSPLANE_BEDROCK_SHIM_CONFIG_IMAGE")
 							want.SetGroupVersionKind(v1.ConfigurationGroupVersionKind)
 							want.SetRevisionHistoryLimit(&revHistory)
