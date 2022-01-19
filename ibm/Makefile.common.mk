@@ -45,7 +45,6 @@ IMAGE_NAME ?= ibm-crossplane
 RELEASE_VERSION ?= $(shell cat RELEASE_VERSION)
 GIT_VERSION ?= $(shell git describe --exact-match 2> /dev/null || \
                  	   git describe --match=$(git rev-parse --short=8 HEAD) --always --dirty --abbrev=8)
-GO_SUPPORTED_VERSIONS = 1.16.13|1.17.6
 
 export OSBASEIMAGE=registry.access.redhat.com/ubi8/ubi-minimal:latest
 
