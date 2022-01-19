@@ -162,6 +162,16 @@ cobertura:
 		grep -v zz_generated.deepcopy | \
 		$(GOCOVER_COBERTURA) > $(GO_TEST_OUTPUT)/cobertura-coverage.xml
 
+# Ensure a PR is ready for review.
+reviewable: generate lint
+	@go mod tidy
+
+# Ensure branch is clean.
+check-diff: reviewable
+	@$(INFO) checking that branch is clean
+	@test -z "$$(git status --porcelain)" || $(FAIL)
+	@$(OK) branch is clean
+
 # integration tests
 e2e.run: test-integration
 
