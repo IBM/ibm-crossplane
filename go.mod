@@ -8,7 +8,7 @@ require (
 	github.com/alecthomas/kong v0.2.17
 	github.com/aws/aws-sdk-go v1.31.6 // indirect
 	github.com/crossplane/crossplane-runtime v0.15.0
-	github.com/docker/cli v0.0.0-20200915230204-cd8016b6bcc5 // indirect
+	github.com/docker/cli v20.10.12+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200926000217-2617742802f6+incompatible // indirect
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.4.1
@@ -28,3 +28,5 @@ require (
 	sigs.k8s.io/controller-tools v0.3.0
 	sigs.k8s.io/yaml v1.2.0
 )
+
+replace github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
