@@ -91,7 +91,7 @@ func (c *buildCmd) Run(child *buildChild, logger logging.Logger) error { // noli
 		}
 		pkgName = xpkg.FriendlyID(pkgName, hash.Hex)
 	}
-
+	// IBM Patch: sanitize path to prevent path traversal
 	path, err := xpkg.BuildPath(root, pkgName)
 	if err != nil {
 		logger.Debug(errCreatePackage, "error", err)

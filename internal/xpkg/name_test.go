@@ -219,6 +219,7 @@ func TestBuildPath(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
+			// IBM Patch: sanitize path to prevent path traversal
 			full, err := BuildPath(tc.args.path, tc.args.name)
 
 			if err != nil {

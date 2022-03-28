@@ -67,6 +67,7 @@ func (c *ImageCache) Get(tag, id string) (v1.Image, error) {
 		}
 		t = &nt
 	}
+	// IBM Patch: sanitize path to prevent path traversal
 	path, err := BuildPath(c.dir, id)
 	if err != nil {
 		return nil, err
@@ -82,6 +83,7 @@ func (c *ImageCache) Store(tag, id string, img v1.Image) error {
 	if err != nil {
 		return err
 	}
+	// IBM Patch: sanitize path to prevent path traversal
 	path, err := BuildPath(c.dir, id)
 	if err != nil {
 		return err
@@ -100,6 +102,7 @@ func (c *ImageCache) Store(tag, id string, img v1.Image) error {
 func (c *ImageCache) Delete(id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	// IBM Patch: sanitize path to prevent path traversal
 	path, err := BuildPath(c.dir, id)
 	if err != nil {
 		return err
