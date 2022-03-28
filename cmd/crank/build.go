@@ -47,7 +47,7 @@ type buildCmd struct {
 }
 
 // Run runs the build cmd.
-func (c *buildCmd) Run(child *buildChild, logger logging.Logger) error {
+func (c *buildCmd) Run(child *buildChild, logger logging.Logger) error { // nolint: gocyclo
 	logger = logger.WithValues("Name", child.name)
 	root, err := filepath.Abs(c.PackageRoot)
 	if err != nil {
@@ -91,8 +91,13 @@ func (c *buildCmd) Run(child *buildChild, logger logging.Logger) error {
 		}
 		pkgName = xpkg.FriendlyID(pkgName, hash.Hex)
 	}
-
-	f, err := child.fs.Create(xpkg.BuildPath(root, pkgName))
+	// IBM Patch: sanitize path to prevent path traversal
+	path, err := xpkg.BuildPath(root, pkgName)
+	if err != nil {
+		logger.Debug(errCreatePackage, "error", err)
+		return err
+	}
+	f, err := child.fs.Create(path)
 	if err != nil {
 		logger.Debug(errCreatePackage, "error", err)
 		return errors.Wrap(err, errCreatePackage)

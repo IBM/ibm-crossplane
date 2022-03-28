@@ -17,6 +17,7 @@ limitations under the License.
 package xpkg
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,10 +85,17 @@ func ToDNSLabel(s string) string { // nolint:gocyclo
 
 // BuildPath builds a path for a compiled Crossplane package. If file name has
 // extension it will be replaced.
-func BuildPath(path, name string) string {
+// IBM Patch: sanitize path to prevent path traversal
+func BuildPath(path, name string) (string, error) {
 	full := filepath.Join(path, name)
 	ext := filepath.Ext(full)
-	return full[0:len(full)-len(ext)] + XpkgExtension
+	final := full[0:len(full)-len(ext)] + XpkgExtension
+	finalSanitized := filepath.Clean(final)
+	if name == "" || strings.HasPrefix(finalSanitized, path) {
+		return finalSanitized, nil
+	}
+	return "", errors.New("invalid path: final path must point inside the first argument path")
+
 }
 
 // ParseNameFromMeta extracts the package name from its meta file.
