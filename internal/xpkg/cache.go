@@ -67,7 +67,11 @@ func (c *ImageCache) Get(tag, id string) (v1.Image, error) {
 		}
 		t = &nt
 	}
-	return tarball.Image(fsOpener(BuildPath(c.dir, id), c.fs), t)
+	path, err := BuildPath(c.dir, id)
+	if err != nil {
+		return nil, err
+	}
+	return tarball.Image(fsOpener(path, c.fs), t)
 }
 
 // Store saves an image to the ImageCache.
@@ -78,7 +82,11 @@ func (c *ImageCache) Store(tag, id string, img v1.Image) error {
 	if err != nil {
 		return err
 	}
-	cf, err := c.fs.Create(BuildPath(c.dir, id))
+	path, err := BuildPath(c.dir, id)
+	if err != nil {
+		return err
+	}
+	cf, err := c.fs.Create(path)
 	if err != nil {
 		return err
 	}
@@ -92,7 +100,11 @@ func (c *ImageCache) Store(tag, id string, img v1.Image) error {
 func (c *ImageCache) Delete(id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	err := c.fs.Remove(BuildPath(c.dir, id))
+	path, err := BuildPath(c.dir, id)
+	if err != nil {
+		return err
+	}
+	err = c.fs.Remove(path)
 	if os.IsNotExist(err) {
 		return nil
 	}

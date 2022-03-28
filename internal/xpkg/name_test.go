@@ -219,8 +219,11 @@ func TestBuildPath(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			full := BuildPath(tc.args.path, tc.args.name)
+			full, err := BuildPath(tc.args.path, tc.args.name)
 
+			if err != nil {
+				t.Errorf("\n%s\nBuildPath(...): %s", tc.reason, err)
+			}
 			if diff := cmp.Diff(tc.want, full); diff != "" {
 				t.Errorf("\n%s\nBuildPath(...): -want, +got:\n%s", tc.reason, diff)
 			}
