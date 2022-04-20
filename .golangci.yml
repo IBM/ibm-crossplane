@@ -142,10 +142,12 @@ issues:
       linters:
         - errchkjson
 
-    - path: apis/(eventstreamsadminv1|cloudantv1)/v1alpha1/referencers\.go
+    - path: (reconciler\.go)|(cmd/crank/install\.go)
       text: "error is not nil"
       linters:
         - nilerr
+
+    
     ###End of todo
 
     # Ease some gocritic warnings on test files.
