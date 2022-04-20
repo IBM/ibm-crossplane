@@ -147,6 +147,11 @@ issues:
       linters:
         - nilerr
 
+    - path: install\.go
+      text: "type assertion on error will fail on wrapped errors."
+      linters:
+        - errorlint
+
     
     ###End of todo
 
