@@ -142,7 +142,7 @@ issues:
       linters:
         - errchkjson
 
-    - path: (reconciler\.go)|(cmd/crank/install\.go)
+    - path: (reconciler\.go)|(install\.go)
       text: "error is not nil"
       linters:
         - nilerr
