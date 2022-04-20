@@ -131,10 +131,29 @@ issues:
       linters:
         - gocyclo
         - errcheck
+        - errchkjson
         - dupl
         - gosec
         - scopelint
         - unparam
+    
+    ###TODO in the future
+    - text: "is not checked"
+      linters:
+        - errchkjson
+
+    - path: (reconciler\.go)|(install\.go)
+      text: "error is not nil"
+      linters:
+        - nilerr
+
+    - path: install\.go
+      text: "type assertion on error will fail on wrapped errors."
+      linters:
+        - errorlint
+
+    
+    ###End of todo
 
     # Ease some gocritic warnings on test files.
     - path: _test\.go

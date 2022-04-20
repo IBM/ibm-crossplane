@@ -38,6 +38,9 @@ S3_BUCKET ?= crossplane.releases
 # ====================================================================================
 # Setup Go
 
+# Setup golang-ci version
+GOLANGCILINT_VERSION=1.45.0
+
 # Set a sane default so that the nprocs calculation below is less noisy on the initial
 # loading of this file
 NPROCS ?= 1
