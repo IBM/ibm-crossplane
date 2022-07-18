@@ -38,6 +38,7 @@ type Provider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Spec   ProviderSpec   `json:"spec,omitempty"`
 	Status ProviderStatus `json:"status,omitempty"`
 }
@@ -87,6 +88,7 @@ type ProviderRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Spec   PackageRevisionSpec   `json:"spec,omitempty"`
 	Status PackageRevisionStatus `json:"status,omitempty"`
 }

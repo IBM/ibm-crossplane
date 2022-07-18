@@ -133,6 +133,7 @@ spec:
             required:
             - controller
             type: object
+            x-kubernetes-preserve-unknown-fields: true
         required:
         - spec
         type: object
@@ -255,6 +256,7 @@ spec:
             required:
             - controller
             type: object
+            x-kubernetes-preserve-unknown-fields: true
         required:
         - spec
         type: object

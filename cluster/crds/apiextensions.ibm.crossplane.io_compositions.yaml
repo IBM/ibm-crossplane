@@ -1,3 +1,5 @@
+
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -558,6 +560,7 @@ spec:
             - compositeTypeRef
             - resources
             type: object
+            x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
     storage: true
@@ -1095,6 +1098,7 @@ spec:
             - compositeTypeRef
             - resources
             type: object
+            x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
     storage: false

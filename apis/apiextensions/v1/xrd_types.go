@@ -167,6 +167,7 @@ type CompositeResourceDefinition struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Spec   CompositeResourceDefinitionSpec   `json:"spec,omitempty"`
 	Status CompositeResourceDefinitionStatus `json:"status,omitempty"`
 }
