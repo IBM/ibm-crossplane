@@ -41,6 +41,7 @@ type Configuration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Spec ConfigurationSpec `json:"spec"`
 }
 
