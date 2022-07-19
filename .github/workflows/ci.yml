@@ -115,6 +115,9 @@ jobs:
       - name: Check Diff
         run: make check-diff
 
+      - name Git Diff
+        run: git diff
+
   unit-tests:
     runs-on: ubuntu-18.04
     needs: detect-noop
