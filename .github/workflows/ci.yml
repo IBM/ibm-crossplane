@@ -112,15 +112,8 @@ jobs:
       - name: Vendor Dependencies
         run: make vendor vendor.check
 
-      - name: run generate
-        run: make generate
-      - name: Git Diff
-        run: git diff
-
       - name: Check Diff
         run: make check-diff
-
-
 
   unit-tests:
     runs-on: ubuntu-18.04
