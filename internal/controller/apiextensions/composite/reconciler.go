@@ -33,12 +33,15 @@ package composite
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	unstructuredv1 "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -498,6 +501,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: shortWait}, nil
 	}
 
+	watchNamespace := os.Getenv("WATCH_NAMESPACE")
+
+	cm := &unstructuredv1.Unstructured{}
+	cm.SetGroupVersionKind(schema.GroupVersionKind{Version: "v1", Kind: "ConfigMap"})
+
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: watchNamespace, Name: "cf-crossplane"}, cm); err != nil {
+		log.Debug(errGet, "error", err)
+		return reconcile.Result{}, errors.Wrap(resource.IgnoreNotFound(err), errGet)
+	}
+
+	data := cm.Object["data"].(map[string]interface{})
+
+	flag := data["gracfullyDelete"]
+	removeFinalizer := false
+
+	if flag != nil {
+		removeFinalizer = flag.(string) == "true"
+	}
+
 	// We apply all of our composed resources before we observe them and update
 	// the composite resource accordingly in the loop below. This ensures that
 	// issues observing and processing one composed resource won't block the
@@ -508,6 +530,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if !cd.rendered {
 			continue
 		}
+		if removeFinalizer {
+			log.Debug("Removing finalizer")
+			cds[i].resource.SetFinalizers([]string{})
+		}
+
 		// IBM Patch: Do not require that cd is controlled by cr
 		if err := r.client.Apply(ctx, cd.resource, mergeOptions(cd.appliedPatches)...); err != nil {
 			log.Debug(errApply, "error", err)
