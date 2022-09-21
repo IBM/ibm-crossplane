@@ -513,7 +513,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	data := cm.Object["data"].(map[string]interface{})
 
-	flag := data["gracfullyDelete"]
+	flag := data["removeFinalizersFromObjects"]
 	removeFinalizer := false
 
 	if flag != nil {
