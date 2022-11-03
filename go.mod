@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.31.6 // indirect
 	github.com/crossplane/crossplane-runtime v0.15.0
 	github.com/docker/cli v20.10.12+incompatible // indirect
+	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200926000217-2617742802f6+incompatible // indirect
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.4.1
@@ -29,4 +30,7 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-replace github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
+replace (
+	github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
+	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
+)
