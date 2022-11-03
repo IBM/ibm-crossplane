@@ -15,6 +15,7 @@ require (
 	github.com/google/go-containerregistry v0.4.1
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210330174036-3259211c1f24
 	github.com/imdario/mergo v0.3.12
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.4.1
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -33,4 +34,5 @@ require (
 replace (
 	github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
 	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
+	github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2
 )
