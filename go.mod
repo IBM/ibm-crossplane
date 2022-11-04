@@ -9,11 +9,13 @@ require (
 	github.com/aws/aws-sdk-go v1.31.6 // indirect
 	github.com/crossplane/crossplane-runtime v0.15.0
 	github.com/docker/cli v20.10.12+incompatible // indirect
+	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200926000217-2617742802f6+incompatible // indirect
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.4.1
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210330174036-3259211c1f24
 	github.com/imdario/mergo v0.3.12
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.4.1
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -29,4 +31,8 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-replace github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
+replace (
+	github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
+	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
+	github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2
+)
