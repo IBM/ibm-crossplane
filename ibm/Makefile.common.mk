@@ -49,10 +49,10 @@ GIT_VERSION ?= $(shell git describe --exact-match 2> /dev/null || \
 export OSBASEIMAGE=registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 ifeq ($(BUILD_LOCALLY),0)
-	DOCKER_REGISTRY = hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom
+	DOCKER_REGISTRY = docker-na-public.artifactory.swg-devops.com/hyc-cloud-private-integration-docker-local/ibmcom
 	export BUILD_REGISTRY=$(DOCKER_REGISTRY)
 else
-	DOCKER_REGISTRY = hyc-cloud-private-scratch-docker-local.artifactory.swg-devops.com/ibmcom
+	DOCKER_REGISTRY = docker-na-public.artifactory.swg-devops.com/hyc-cloud-private-scratch-docker-local/ibmcom
 endif
 
 ifeq ($(HOSTOS),darwin)
