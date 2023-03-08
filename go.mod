@@ -20,8 +20,10 @@ require (
 	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/spf13/afero v1.4.1
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/tools v0.6.0
+	golang.org/x/net v0.0.0-20220906165146-f3363e06e74c // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/term v0.1.0 // indirect
+	golang.org/x/tools v0.1.11
 	k8s.io/api v0.21.2
 	k8s.io/apiextensions-apiserver v0.21.2
 	k8s.io/apimachinery v0.21.2
