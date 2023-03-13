@@ -11,7 +11,7 @@ on:
 env:
   # Common versions
   GO_VERSION: '1.18.9'
-  GOLANGCI_VERSION: 'v1.49'
+  GOLANGCI_VERSION: 'v1.50.1'
   DOCKER_BUILDX_VERSION: 'v0.4.2'
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
           submodules: true
 
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
 
