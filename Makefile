@@ -176,6 +176,7 @@ check-diff: reviewable
 	@$(INFO) checking that branch is clean
 	git diff internal/client/clientset/versioned/fake/register.go
 	git diff internal/client/clientset/versioned/scheme/register.go
+	git status --porcelain
 	@test -z "$$(git status --porcelain)" || $(FAIL)
 	@$(OK) branch is clean
 
