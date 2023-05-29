@@ -114,6 +114,6 @@ require (
 
 replace (
 	github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
-	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
+	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2
 )
