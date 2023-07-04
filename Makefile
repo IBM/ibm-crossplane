@@ -165,6 +165,18 @@ cobertura:
 		grep -v zz_generated.deepcopy | \
 		$(GOCOVER_COBERTURA) > $(GO_TEST_OUTPUT)/cobertura-coverage.xml
 
+generate: $(HELM) $(KUSTOMIZE) go.vendor go.generate gen-kustomize-crds
+	@$(OK) Finished vendoring and generating
+
+reviewable:
+	@go mod tidy
+
+# Ensure branch is clean.
+check-diff: reviewable
+	@$(INFO) checking that branch is clean
+	@test -z "$$(git status --porcelain)" || $(FAIL)
+	@$(OK) branch is clean
+
 # integration tests
 e2e.run: test-integration
 
