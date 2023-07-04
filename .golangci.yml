@@ -117,6 +117,9 @@ linters:
     - misspell
     - nakedret
 
+  disable:
+    - musttag
+
   presets:
     - bugs
     - unused

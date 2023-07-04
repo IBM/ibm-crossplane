@@ -1,6 +1,6 @@
 module github.com/crossplane/crossplane
 
-go 1.17
+go 1.20
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -44,8 +44,8 @@ require (
 	github.com/containerd/stargz-snapshotter/estargz v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v20.10.12+incompatible // indirect
-	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200926000217-2617742802f6+incompatible // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
+	github.com/docker/docker v23.0.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
@@ -114,6 +114,6 @@ require (
 
 replace (
 	github.com/docker/cli => github.com/docker/cli v20.10.12+incompatible
-	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
+	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2
 )
