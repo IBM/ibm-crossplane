@@ -20,10 +20,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8s "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/crossplane/crossplane-runtime/pkg/errors"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/test"
@@ -335,8 +336,7 @@ func TestMergeReplace(t *testing.T) {
 				desired:   strObject("desired"),
 			},
 			want: want{
-				err: errors.Wrap(errors.New(
-					"ToUnstructured requires a non-nil pointer to an object, got composite.strObject"),
+				err: errors.Wrap(errors.New("ToUnstructured requires a non-nil pointer to an object, got composite.strObject"),
 					"cannot convert object to unstructured data"),
 			},
 		},
