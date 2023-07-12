@@ -10,13 +10,13 @@ on:
 
 env:
   # Common versions
-  GO_VERSION: '1.18.9'
-  GOLANGCI_VERSION: 'v1.45'
+  GO_VERSION: '1.20.5'
+  GOLANGCI_VERSION: 'v1.51.2'
   DOCKER_BUILDX_VERSION: 'v0.4.2'
 
 jobs:
   detect-noop:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     outputs:
       noop: ${{ steps.noop.outputs.should_skip }}
     steps:
@@ -30,7 +30,7 @@ jobs:
           concurrent_skipping: false
 
   lint:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: detect-noop
     if: needs.detect-noop.outputs.noop != 'true'
 
@@ -41,7 +41,7 @@ jobs:
           submodules: true
 
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -50,14 +50,14 @@ jobs:
         run: echo "::set-output name=cache::$(go env GOCACHE)"
 
       - name: Cache the Go Build Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ steps.go.outputs.cache }}
           key: ${{ runner.os }}-build-lint-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-build-lint-
 
       - name: Cache Go Dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .work/pkg
           key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
@@ -70,24 +70,23 @@ jobs:
       # this action because it leaves 'annotations' (i.e. it comments on PRs to
       # point out linter violations).
       - name: Lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           version: ${{ env.GOLANGCI_VERSION }}
-          skip-go-installation: true
 
   check-diff:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: detect-noop
     if: needs.detect-noop.outputs.noop != 'true'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: true
 
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -96,14 +95,14 @@ jobs:
         run: echo "::set-output name=cache::$(go env GOCACHE)"
 
       - name: Cache the Go Build Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ steps.go.outputs.cache }}
           key: ${{ runner.os }}-build-check-diff-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-build-check-diff-
 
       - name: Cache Go Dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .work/pkg
           key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
@@ -116,7 +115,7 @@ jobs:
         run: make check-diff
 
   unit-tests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: detect-noop
     if: needs.detect-noop.outputs.noop != 'true'
 
@@ -159,7 +158,7 @@ jobs:
         run: make -j2 test
 
   e2e-tests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: detect-noop
     if: needs.detect-noop.outputs.noop != 'true'
 
@@ -176,7 +175,7 @@ jobs:
           install: true
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -184,7 +183,7 @@ jobs:
         run: git fetch --prune --unshallow
 
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -193,14 +192,14 @@ jobs:
         run: echo "::set-output name=cache::$(go env GOCACHE)"
 
       - name: Cache the Go Build Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ steps.go.outputs.cache }}
           key: ${{ runner.os }}-build-e2e-tests-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-build-e2e-tests-
 
       - name: Cache Go Dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .work/pkg
           key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
