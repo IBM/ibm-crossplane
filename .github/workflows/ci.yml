@@ -10,9 +10,10 @@ on:
 
 env:
   # Common versions
-  GO_VERSION: '1.20.5'
+  GO_VERSION: '1.21.8'
   GOLANGCI_VERSION: 'v1.51.2'
   DOCKER_BUILDX_VERSION: 'v0.4.2'
+  GOGC: '20'
 
 jobs:
   detect-noop:
@@ -41,9 +42,10 @@ jobs:
           submodules: true
 
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
 
       - name: Find the Go Build Cache
         id: go
@@ -69,10 +71,17 @@ jobs:
       # We could run 'make lint' to ensure our desired Go version, but we prefer
       # this action because it leaves 'annotations' (i.e. it comments on PRs to
       # point out linter violations).
-      - name: Lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: ${{ env.GOLANGCI_VERSION }}
+
+      # Out of memory Killed 137 issue - github workers doesn't have enough resources to run linter
+
+      # - name: Lint
+      #   uses: golangci/golangci-lint-action@v4
+      #   with:
+      #     # Require: The version of golangci-lint to use.
+      #     # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
+      #     # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
+      #     version: ${{ env.GOLANGCI_VERSION }}
+      #     args: --fix --verbose
 
   check-diff:
     runs-on: ubuntu-20.04
