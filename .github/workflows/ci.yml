@@ -78,7 +78,7 @@ jobs:
           # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
           # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
           version: ${{ env.GOLANGCI_VERSION }}
-          args: --timeout=30m --fix --verbose
+          args: --fix --verbose
 
   check-diff:
     runs-on: ubuntu-20.04
