@@ -1,6 +1,6 @@
 module github.com/crossplane/crossplane
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -16,10 +16,10 @@ require (
 	golang.org/x/tools v0.6.0
 	k8s.io/api v0.23.0
 	k8s.io/apiextensions-apiserver v0.23.0
-	k8s.io/apimachinery v0.23.0
+	k8s.io/apimachinery v0.23.17
 	k8s.io/client-go v0.23.0
 	k8s.io/code-generator v0.23.0
-	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
+	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/controller-tools v0.8.0
 	sigs.k8s.io/yaml v1.3.0
@@ -94,7 +94,7 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
@@ -109,7 +109,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/legacy-cloud-providers v0.19.7 // indirect
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
 replace (
