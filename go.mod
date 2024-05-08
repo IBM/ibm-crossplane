@@ -1,6 +1,6 @@
 module github.com/crossplane/crossplane
 
-go 1.22
+go 1.21
 
 require (
 	github.com/Masterminds/semver v1.5.0
